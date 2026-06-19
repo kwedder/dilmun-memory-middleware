@@ -19,6 +19,7 @@ __version__ = "0.1.0"
 from .middleware import DilmunMemoryMiddleware
 from .memory_store import MemoryStore
 from .ring_memory import GradedMemoryRing, IdealForgetting, TensorProductMemory
+from .compression import compress_notes, CompressionError
 
 __all__ = [
     "DilmunMemoryMiddleware",
@@ -26,4 +27,6 @@ __all__ = [
     "GradedMemoryRing",
     "IdealForgetting",
     "TensorProductMemory",
+    "compress_notes",
+    "CompressionError",
 ]
