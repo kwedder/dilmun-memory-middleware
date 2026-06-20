@@ -1,9 +1,9 @@
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-19)
+See: .planning/PROJECT.md (updated 2026-06-20)
 
 **Core value:** AI agents with persistent, structured memory that transcends context windows.
-**Current focus:** Phase 4 - Backend API
+**Current focus:** Phase 5 - Session Management
 
 | Phase | Status | Plans | Progress |
 | ----- | ------ | ----- | -------- |
@@ -20,4 +20,4 @@ See: .planning/PROJECT.md (updated 2026-06-19)
 | v1 coverage | 100% |
 
 ---
-*State updated: 2026-06-20 after Phase 3 verification*
+*State updated: 2026-06-20 after Phase 4 progress*

@@ -24,7 +24,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### API
 
-- [ ] **API-01**: Create API endpoint to serve facts
+- [x] **API-01**: Create API endpoint to serve facts - Phase 4 ✓
 - [ ] **API-02**: Dashboard fetches data from API
 
 ### Session Management
@@ -68,7 +68,7 @@ Deferred to future release.
 | PATH-02 | Phase 2 | ✓ Complete |
 | MEM-01 | Phase 3 | ✓ Complete |
 | MEM-02 | Phase 3 | ✓ Complete |
-| API-01 | Phase 4 | Pending |
+| API-01 | Phase 4 | ✓ Complete |
 | API-02 | Phase 4 | Pending |
 | SESS-01 | Phase 5 | Pending |
 | SESS-02 | Phase 5 | Pending |
@@ -82,4 +82,4 @@ Deferred to future release.
 
 ---
 *Requirements defined: 2026-06-18*
-*Last updated: 2026-06-20 after Phase 3 verification*
+*Last updated: 2026-06-20 after Phase 4 progress*
