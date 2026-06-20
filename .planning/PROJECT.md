@@ -44,6 +44,12 @@ The Dilmun Protocol is already deployed and working:
 
 This extraction packages the proven middleware patterns into a reusable library.
 
+**Current Issues Found:**
+
+- Windows paths hardcoded in `middleware_server.py`, `write_project.py`, `check_index.py`, `active_check.py`, `shopify_auth.py`
+- Import paths need updating to use `dilmun-memory-middleware` package
+- Dashboard is a client-side demo, needs backend API connection
+
 ## Constraints
 
 - **Tech stack**: Python 3.10+, no heavy ML dependencies
