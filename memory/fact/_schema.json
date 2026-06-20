@@ -1,0 +1,5 @@
+{
+  "lifecycle": "medium volume, long half-life",
+  "composition": "merge facts about same entity",
+  "contradiction": "same entity, same predicate, different values"
+}

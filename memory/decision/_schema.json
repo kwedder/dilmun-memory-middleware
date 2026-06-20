@@ -1,0 +1,5 @@
+{
+  "lifecycle": "low volume, permanent",
+  "composition": "forbidden (immutable)",
+  "contradiction": "explicit reversal"
+}
