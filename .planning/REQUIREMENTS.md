@@ -19,8 +19,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Memory Storage
 
-- [ ] **MEM-01**: Store facts as entity-predicate-value with metadata
-- [ ] **MEM-02**: Retrieve facts by entity, predicate, or scope
+- [x] **MEM-01**: Store facts as entity-predicate-value with metadata - Phase 3 ✓
+- [x] **MEM-02**: Retrieve facts by entity, predicate, or scope - Phase 3 ✓
 
 ### API
 
@@ -66,8 +66,8 @@ Deferred to future release.
 | DEP-02 | Phase 1 | ✓ Complete |
 | PATH-01 | Phase 2 | ✓ Complete |
 | PATH-02 | Phase 2 | ✓ Complete |
-| MEM-01 | Phase 3 | Pending |
-| MEM-02 | Phase 3 | Pending |
+| MEM-01 | Phase 3 | ✓ Complete |
+| MEM-02 | Phase 3 | ✓ Complete |
 | API-01 | Phase 4 | Pending |
 | API-02 | Phase 4 | Pending |
 | SESS-01 | Phase 5 | Pending |
@@ -82,4 +82,4 @@ Deferred to future release.
 
 ---
 *Requirements defined: 2026-06-18*
-*Last updated: 2026-06-19 after Phase 2 completion*
+*Last updated: 2026-06-20 after Phase 3 verification*
