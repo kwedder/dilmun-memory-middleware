@@ -1,0 +1,7 @@
+{
+  "partition": "episode",
+  "lifecycle": "medium volume, relational anchor",
+  "contradiction": "none",
+  "write_blocks": false,
+  "schema": "purpose, active_scopes, status, child_note_ids"
+}
