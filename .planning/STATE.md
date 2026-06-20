@@ -3,12 +3,12 @@
 See: .planning/PROJECT.md (updated 2026-06-19)
 
 **Core value:** AI agents with persistent, structured memory that transcends context windows.
-**Current focus:** Phase 1 - Fix Dependencies
+**Current focus:** Phase 3 - Memory Storage
 
 | Phase | Status | Plans | Progress |
 | ----- | ------ | ----- | -------- |
-| 1     | ○      | 2     | 0%       |
-| 2     | ○      | 2     | 0%       |
+| 1     | ✓      | 2     | 100%     |
+| 2     | ✓      | 2     | 100%     |
 | 3     | ○      | 2     | 0%       |
 | 4     | ○      | 2     | 0%       |
 | 5     | ○      | 3     | 0%       |
@@ -20,4 +20,4 @@ See: .planning/PROJECT.md (updated 2026-06-19)
 | v1 coverage | 100% |
 
 ---
-*State updated: 2026-06-19 after issue diagnosis*
+*State updated: 2026-06-19 after Phase 2 completion*
