@@ -25,13 +25,13 @@ Requirements for initial release. Each maps to roadmap phases.
 ### API
 
 - [x] **API-01**: Create API endpoint to serve facts - Phase 4 ✓
-- [ ] **API-02**: Dashboard fetches data from API
+- [x] **API-02**: Dashboard fetches data from API - Phase 4 ✓
 
 ### Session Management
 
-- [ ] **SESS-01**: Open and close episodes (session contexts)
-- [ ] **SESS-02**: Retrieve facts scoped to active episode
-- [ ] **SESS-03**: Track episode purpose and active scopes
+- [x] **SESS-01**: Open and close episodes (session contexts) - Phase 5 ✓
+- [x] **SESS-02**: Retrieve facts scoped to active episode - Phase 5 ✓
+- [x] **SESS-03**: Track episode purpose and active scopes - Phase 5 ✓
 
 ## v2 Requirements
 
@@ -69,10 +69,10 @@ Deferred to future release.
 | MEM-01 | Phase 3 | ✓ Complete |
 | MEM-02 | Phase 3 | ✓ Complete |
 | API-01 | Phase 4 | ✓ Complete |
-| API-02 | Phase 4 | Pending |
-| SESS-01 | Phase 5 | Pending |
-| SESS-02 | Phase 5 | Pending |
-| SESS-03 | Phase 5 | Pending |
+| API-02 | Phase 4 | ✓ Complete |
+| SESS-01 | Phase 5 | ✓ Complete |
+| SESS-02 | Phase 5 | ✓ Complete |
+| SESS-03 | Phase 5 | ✓ Complete |
 
 **Coverage:**
 
@@ -82,4 +82,4 @@ Deferred to future release.
 
 ---
 *Requirements defined: 2026-06-18*
-*Last updated: 2026-06-20 after Phase 4 progress*
+*Last updated: 2026-06-20 - All phases complete*
