@@ -29,9 +29,11 @@ from .operators import (
     degree_centrality,
     derive,
     forget,
+    merge,
     retrieve,
     score_facts,
 )
+from .normalization import PredicateRegistry, default_normalize, normalize
 from .backends import Backend, JSONVault, SQLiteBackend
 
 # Legacy markdown-vault store and its compression pipeline.
@@ -46,6 +48,7 @@ __all__ = [
     "Fact",
     "canonicalize",
     "forget",
+    "merge",
     "compose",
     "composable",
     "derive",
@@ -53,6 +56,9 @@ __all__ = [
     "score_facts",
     "build_graph",
     "degree_centrality",
+    "PredicateRegistry",
+    "normalize",
+    "default_normalize",
     "Backend",
     "JSONVault",
     "SQLiteBackend",

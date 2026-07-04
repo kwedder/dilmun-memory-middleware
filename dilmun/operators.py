@@ -54,6 +54,28 @@ def canonicalize(facts: Iterable[Fact]) -> List[Fact]:
 
 
 # ---------------------------------------------------------------------------
+# merge — combine two memory states
+# ---------------------------------------------------------------------------
+
+def merge(m1: Iterable[Fact], m2: Iterable[Fact]) -> List[Fact]:
+    """merge(M1, M2) = C(M1 ∪ M2).
+
+    Union the two states (facts are deduplicated by id) and canonicalize.
+    Because ∪ is commutative and associative and C is a deterministic
+    function of the resulting set, merge is commutative and associative:
+
+        merge(M1, M2)        == merge(M2, M1)
+        merge(merge(A,B), C) == merge(A, merge(B,C))
+
+    (test-backed in tests/test_operators.py, not a machine-checked proof.)
+    """
+    by_id: Dict[str, Fact] = {}
+    for fact in list(m1) + list(m2):
+        by_id.setdefault(fact.id, fact)
+    return canonicalize(by_id.values())
+
+
+# ---------------------------------------------------------------------------
 # F — forgetting
 # ---------------------------------------------------------------------------
 

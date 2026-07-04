@@ -20,10 +20,11 @@ episodes is explicit (promote()).
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 from .backends import Backend, make_backend
 from .fact import Fact
+from .normalization import PredicateRegistry, default_normalize, normalize
 from .operators import (
     DEFAULT_WEIGHTS,
     build_graph,
@@ -32,6 +33,7 @@ from .operators import (
     composable,
     derive,
     forget,
+    merge,
     retrieve,
 )
 
@@ -46,10 +48,12 @@ class DilmunMemory:
         *,
         min_confidence: float = 0.0,
         weights: Tuple[float, float, float] = DEFAULT_WEIGHTS,
+        predicates: Optional[PredicateRegistry] = None,
     ):
         self.backend: Backend = make_backend(backend, vault_path)
         self.min_confidence = min_confidence
         self.weights = weights
+        self.predicates = predicates
         self._facts: List[Fact] = self.backend.load()
         self._episodes: Dict[str, Dict] = self.backend.load_episodes()
         self._seq = 1 + max((f.seq for f in self._facts), default=-1)
@@ -103,6 +107,10 @@ class DilmunMemory:
         domain; omit for facts that never expire.
         """
         now = time.time()
+        if self.predicates is not None:
+            predicate = self.predicates.normalize(predicate)
+        else:
+            predicate = default_normalize(predicate)
         fact = Fact(
             entity=entity,
             predicate=predicate,
@@ -230,6 +238,27 @@ class DilmunMemory:
         self._facts = kept
         self.backend.replace_all(kept)
         return canonicalize(self.facts())
+
+    def normalize(self, *, apply: bool = False) -> List[Fact]:
+        """Normalize predicates over the whole store using the configured
+        registry (or default normalization if none). With apply=True the
+        store is rewritten with normalized predicates, which lets
+        previously-fragmented aliases collapse under canonicalize()."""
+        normalized = normalize(self._facts, self.predicates)
+        if apply:
+            self._facts = normalized
+            self.backend.replace_all(normalized)
+        return normalized
+
+    def merge(
+        self,
+        other: Union["DilmunMemory", Iterable[Fact]],
+    ) -> List[Fact]:
+        """merge(self, other) = C(self ∪ other) over the global-visible
+        states. Read-only: returns the canonical merged facts without
+        mutating either store. Commutative and associative."""
+        other_facts = other.facts() if isinstance(other, DilmunMemory) else list(other)
+        return merge(self.facts(), other_facts)
 
     def forget(
         self,

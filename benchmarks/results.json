@@ -1,0 +1,33 @@
+[
+  {
+    "task": "current-value recall under updates",
+    "entities": 200,
+    "updates_each": 5,
+    "dilmun_accuracy": 1.0,
+    "vector_accuracy": 0.245
+  },
+  {
+    "task": "determinism under insertion-order shuffles",
+    "queries": 150,
+    "shuffles": 8,
+    "dilmun_stable_fraction": 1.0,
+    "vector_stable_fraction": 0.9667
+  },
+  {
+    "task": "duplicate suppression under predicate paraphrase",
+    "entities": 200,
+    "aliases_per_fact": 4,
+    "dilmun_stored_facts": 200,
+    "vector_stored_facts": 800,
+    "vector_top4_redundant_hits": 4
+  },
+  {
+    "task": "latency",
+    "facts_written": 2000,
+    "queries": 500,
+    "dilmun_write_facts_per_sec": 8450,
+    "vector_write_facts_per_sec": 149178,
+    "dilmun_query_ms": 0.567,
+    "vector_query_ms": 0.167
+  }
+]

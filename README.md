@@ -1,74 +1,81 @@
-# Dilmun Memory Middleware
+# Dilmun
 
-*A deterministic, algebraically structured memory system for persistent AI agents.*
-
----
-
-## Overview
-
-Dilmun Memory Middleware is a persistent memory layer designed for AI systems that must operate across long time horizons, multiple sessions, and evolving knowledge states.
-
-Instead of treating memory as:
-
-* raw text logs, or
-* embedding-based retrieval
-
-Dilmun models memory as a **structured algebraic system of immutable facts**, governed by deterministic operations for:
-
-* merging
-* conflict resolution
-* forgetting
-* composition
-* retrieval
+*A deterministic algebra over persistent knowledge states.*
 
 ---
 
-# Core Idea
+## The problem
+
+Modern AI systems forget, duplicate knowledge, and accumulate contradictions
+because memory is usually implemented as conversation logs or vector
+retrieval. Both are *probabilistic surfaces over text*: they can tell you
+what looks similar to a query, but they have no principled account of which
+fact is *current*, whether two differently-worded facts are the *same* fact,
+or what happens when two states are *merged*.
+
+Dilmun approaches memory differently. It models knowledge as an **immutable,
+typed set of facts** governed by **deterministic operators**. Given the same
+facts, Dilmun always returns the same state — regardless of insertion order,
+retries, or how a fact was phrased.
+
+"Persistent memory for AI agents" is the headline application. The core
+contribution is the abstraction underneath it: a deterministic algebra over
+persistent knowledge states. Agents, robotics, IoT, and workflow systems are
+downstream uses of that abstraction.
+
+---
+
+## Core idea
 
 Memory is not a database.
 
 Memory is a **structured algebraic object**.
 
-We define a memory state:
+A memory state is a finite set of facts:
 
-[
-M = {f_1, f_2, ..., f_n}
-]
+```
+M = { f₁, f₂, ..., fₙ }
+```
 
-where each fact is:
+where each fact is a 5-tuple:
 
-[
-f = (e, p, v, t, \nu)
-]
+```
+f = (e, p, v, t, ν)
 
-* **e**: entity
-* **p**: predicate
-* **v**: value
-* **t**: timestamp
-* **ν(f)**: confidence valuation in ([0,1])
+  e  entity
+  p  predicate      (normalized — see below)
+  v  value
+  t  timestamp
+  ν  confidence valuation in [0, 1]
+```
 
----
-
-# Design Principles
-
-* Facts are **immutable**
-* Updates create **new facts**, not mutations
-* Conflicts are resolved deterministically
-* Memory transformations are idempotent
-* Stale knowledge is removed via formal operators
-* Retrieval is structured, not probabilistic guessing
+Everything else in Dilmun is a **total, deterministic function** over sets of
+these facts.
 
 ---
 
-# Installation
+## Design principles
+
+* Facts are **immutable**. Updates append new facts; they never mutate.
+* Predicates are **normalized** so paraphrases collapse to one fact.
+* Conflicts are resolved **deterministically**, not by similarity.
+* Core transformations are **idempotent**.
+* Stale knowledge is removed by a **forgetting** operator, not ad-hoc deletion.
+* Retrieval is **structured and reproducible**, not probabilistic guessing.
+
+---
+
+## Install
 
 ```bash
 pip install dilmun
 ```
 
+Pure-Python, no required dependencies. `numpy` is used only by the benchmark.
+
 ---
 
-# Quick Start
+## Quick start
 
 ```python
 from dilmun import DilmunMemory
@@ -81,240 +88,300 @@ memory.write_fact(
     entity="user",
     predicate="favorite_color",
     value="blue",
-    confidence=0.95
+    confidence=0.95,
 )
 
 memory.write_fact(
     entity="user",
     predicate="location",
-    value="Miami"
+    value="Miami",
 )
 
-context = memory.get_context()
+context = memory.get_context()   # canonical, scored, deterministic
 
 memory.close_episode()
 ```
 
 ---
 
-# Algebraic Structure of Memory
+## The memory algebra
 
-## 1. Memory State Space
+Dilmun is defined by a small set of operators over memory states. Each has a
+precise signature and precise behaviour.
 
-The memory system is a finite set:
+| Operator | Signature | What it does |
+|---|---|---|
+| **Normalize** | `N(M, registry) → M` | Map predicate aliases onto canonical predicates |
+| **Canonicalize** | `C(M) → M` | Collapse conflicting facts to one representative each |
+| **Forget** | `F(M) → M` | Project memory onto its still-valid facts |
+| **Compose** | `comp(f₁, f₂) → f` | Derive a fact by path composition on the graph |
+| **Merge** | `merge(M₁, M₂) → M` | Combine two states: `C(M₁ ∪ M₂)` |
+| **Promote** | `promote(f): Mᵢ → M₀` | Lift an episode fact into global memory |
+| **Retrieve** | `retrieve(M) → [f…]` | Rank facts by a deterministic score |
 
-[
-M = {f_1, f_2, ..., f_n}
-]
+The rest of this section defines each one.
 
-Each fact belongs to a structured state space.
+### 1. Confidence valuation
 
----
+```
+ν : M → [0, 1]
+```
 
-## 2. Valuation Function (Confidence)
+Assigns reliability to each fact. Higher = stronger evidence. Used for
+ranking and as a tie-breaker in canonicalization.
 
-We define a valuation:
+### 2. Predicate normalization — `N`
 
-[
-\nu : M \rightarrow [0,1]
-]
+This is what makes the rest of the algebra stable, and it is the piece most
+memory systems skip.
 
-This assigns reliability to each fact.
+Without normalization, these are **four different facts**:
 
-Properties:
+```
+(A, owns,        B)
+(A, possesses,   B)
+(A, has,         B)
+(A, is owner of, B)
+```
 
-* Higher values = stronger evidence
-* Used for ranking and conflict resolution
-* Composable across updates
+so no conflict is ever detected and memory fragments. Dilmun applies two
+layers of normalization:
 
----
+* **Default normalization** — casefold, trim, collapse whitespace/hyphens to
+  underscores. Applied to *every* predicate. `"is owner of" → "is_owner_of"`.
+* **Registry normalization** — an explicit alias → canonical map on top:
 
-## 3. Episode Partitioning (Graded Structure)
+```python
+from dilmun import DilmunMemory, PredicateRegistry
 
-Memory is partitioned into **episodes**:
+reg = PredicateRegistry().register("OWNS", "owns", "possesses", "has", "is owner of")
 
-[
-M = M_0 \cup M_1 \cup \dots \cup M_k
-]
+memory = DilmunMemory("./vault", predicates=reg)
+memory.write_fact("A", "possesses", "B")   # stored as (A, OWNS, B)
+```
 
-* (M_0): global memory
-* (M_i): episode memory
+Now `(A, owns, B)` and `(A, possesses, B)` are the *same* fact, and
+canonicalization can act on them. Normalization is the precondition that
+turns the operators below from "a database with equations" into an algebra.
 
-This induces a **graded structure over time**, where:
+### 3. Canonicalization — `C`
 
-* facts are isolated by context
-* cross-episode promotion is explicit
-* contamination is prevented by default
-
----
-
-## 4. Canonicalization Operator
-
-Conflicts occur when two facts share:
-
-* entity
-* predicate
-* differing values
-
-Example:
+Two facts **conflict** when they share `(entity, predicate)` but differ in
+value:
 
 ```
 (user, city, Miami)
 (user, city, Orlando)
 ```
 
-We define a canonicalization operator:
+Canonicalization keeps one representative per `(entity, predicate)`:
 
-[
-C : M \rightarrow M
-]
+```
+C(M) = ⋃  select(e, p)
+      (e,p)
 
-Selection rule:
+select(e, p):
+    1. highest timestamp        (most recent wins)
+    2. highest confidence        (tie-break)
+    3. stable insertion order    (final tie-break — total order)
+```
 
-1. Highest timestamp
-2. Highest confidence
-3. Stable insertion order (tie-breaker)
+Because `select` imposes a *total* order on each conflict group, `C` is:
 
-### Canonical Memory Property
+* **idempotent** — `C(C(M)) = C(M)`
+* **deterministic** — `M₁ = M₂ ⇒ C(M₁) = C(M₂)`
 
-* **Idempotence**
-  [
-  C(C(M)) = C(M)
-  ]
+(Both are covered by tests in `tests/test_operators.py`. These are
+test-backed guarantees, not machine-checked proofs — see Roadmap.)
 
-* **Determinism**
-  [
-  M_1 = M_2 \Rightarrow C(M_1) = C(M_2)
-  ]
+### 4. Forgetting — `F`
 
----
+Forgetting is **not deletion**. It is a *projection* of memory onto the
+subset of still-valid facts:
 
-## 5. Forgetting Operator (Closure System)
+```
+F : M → M      F(F(M)) = F(M)
+```
 
-Instead of deletion, Dilmun uses a transformation:
+A fact leaves memory when it is:
 
-[
-F : M \rightarrow M
-]
+* expired (`t` past its TTL),
+* below a confidence floor, or
+* under contradiction pressure (optional policy: it lost canonicalization to
+  a fact with a different value).
 
-A fact is removed if it satisfies:
+`F` is idempotent: reapplying it changes nothing.
 
-* expired timestamp
-* low confidence
-* contradiction pressure (optional policy)
+### 5. Episode-partitioned memory
 
-### Properties
+Memory is partitioned into a global component and per-episode components:
 
-* **Idempotence**
-  [
-  F(F(M)) = F(M)
-  ]
+```
+M = M₀ ∪ M₁ ∪ … ∪ M_k
 
-* **Monotonic reduction of stale information**
+  M₀   global memory
+  Mᵢ   episode memory
+```
 
-This defines a **closure system over memory space**.
+Writes inside an open episode land in that episode; writes outside land in
+`M₀`. Retrieval sees `M₀ ∪ M_active`, so **episodes are isolated by default**
+and cross-episode promotion is **explicit**:
 
----
+```python
+memory.open_episode("session_42")
+f = memory.write_fact("user", "timezone", "EST")   # lives in session_42
+memory.close_episode()
 
-## 6. Memory Graph Structure
+memory.promote(f)   # now visible globally, in M₀
+```
+
+> Note on terminology: this is a *partition* of memory by context, not a
+> graded ring — there is no grading map or graded product defined here. We
+> call it episode partitioning to keep the claim honest.
+
+### 6. Memory graph & composition — `comp`
 
 Facts induce a directed labeled graph:
 
 ```
-Alice ──likes──> Coffee
-Coffee ──served_at──> Cafe
+Alice ──likes──▶ Coffee ──served_at──▶ Cafe
+      nodes = entities/values,  edges = predicates
 ```
 
-Formally:
+Composition derives a new fact by walking an edge pair, valid when
+`f₁.value == f₂.entity`:
 
-* nodes = entities
-* edges = predicates
-* values = labeled relations
+```
+(A, likes, B) ∘ (B, category, C)  =  (A, likes_category, C)
+```
 
-Retrieval becomes graph traversal instead of text search.
+The derived fact carries `ν(f₁)·ν(f₂)`, the newer timestamp, and provenance
+back to both parents. This is path composition over the graph — a structured
+alternative to tensor/embedding combination.
+
+### 7. Retrieval
+
+Retrieval is a **deterministic pipeline**, not approximate search:
+
+```
+candidate generation   (M₀ ∪ M_active)
+        ↓
+forgetting F           (drop expired / low-confidence)
+        ↓
+canonicalization C     (resolve conflicts)
+        ↓
+deterministic ranking  score(f) = w₁·ν(f) + w₂·recency + w₃·centrality
+```
+
+Ties in the score break on newer timestamp, then insertion order, so the
+returned list is fully reproducible. `retrieve` replaces embedding similarity
+with a structured, explainable score.
 
 ---
 
-## 7. Composition of Facts (Relational Product)
+## Benchmarks
 
-Instead of tensor products, Dilmun uses **relational composition**.
+`benchmarks/benchmark.py` compares Dilmun against a TF-IDF cosine-similarity
+memory (`benchmarks/vector_baseline.py`) — the classic embedding-retrieval
+pattern, differing from a neural memory only in the embedding function.
+Everything is seeded and reproducible:
 
-Given:
-
-```
-(A, likes, B)
-(B, category, C)
-```
-
-We derive:
-
-```
-(A, likes_category, C)
+```bash
+python benchmarks/benchmark.py
 ```
 
-Defined as:
+Results (seed `20260704`, Python 3.14, single run):
 
-[
-comp(f_1, f_2)
-]
+| Task | Metric | Dilmun | Vector (TF-IDF) |
+|---|---|---:|---:|
+| **Current-value recall** after 5 updates/entity | correct = latest value | **100.0%** | 24.5% |
+| **Determinism** across 8 insertion-order shuffles | answers stable | **100.0%** | 96.7% |
+| **Dedup** of one fact under 4 predicate aliases | facts stored (200 entities) | **200 (1×)** | 800 (4×) |
+| | redundant hits in top-4 | **0** | 4 / 4 |
+| **Write throughput** (2 000 facts) | facts / sec | 8 450 | **149 178** |
+| **Query latency** (500 queries) | ms / query | 0.567 | **0.167** |
 
-where composition is valid when:
+**What the numbers say.** Where the task is "which fact is *true now*," Dilmun
+is correct by construction and the vector store is near chance (24.5%),
+because cosine similarity has no notion of recency — the current and stale
+versions of a fact look equally similar to a query. Normalization removes the
+4× duplication that paraphrasing creates in the vector store. Determinism is
+the subtler result: even this *exact* baseline flips ~3.3% of answers under
+reordering; approximate-nearest-neighbor indexes over neural embeddings are
+typically less stable, not more.
 
-[
-f_1.v = f_2.e
-]
-
-This is a **path composition operator over the memory graph**.
+**What the numbers do not say.** The vector baseline is faster here — it runs
+in memory while Dilmun persists every write to disk and scans on query.
+Dilmun trades raw throughput for durability and determinism; neither store is
+performance-tuned, so treat latency as order-of-magnitude only.
 
 ---
 
-## 8. Retrieval Function
+## Limitations
 
-Context retrieval is a scoring function:
+Being honest about where this abstraction does and doesn't help:
 
-[
-score(f) = w_1 \nu(f) + w_2 \cdot recency + w_3 \cdot graph_centrality
-]
-
-Returned facts are:
-
-[
-\arg\max_M score(f)
-]
-
-This replaces embedding similarity with structured scoring.
+* **Dilmun does not do semantic retrieval.** It matches on normalized
+  structure, not meaning. A query for `"vehicle"` will not find `(A, owns,
+  car)` unless a registry or synonym layer connects them. Vector memory is
+  the better tool when queries are fuzzy and facts are unstructured text.
+* **Normalization is only as good as its registry.** Out-of-registry
+  paraphrases still fragment. Default normalization handles casing and
+  spacing, not synonymy. Automatic predicate discovery is future work.
+* **Facts must be extracted first.** Dilmun assumes you already have
+  `(e, p, v)` triples. Turning raw conversation into good triples (entity
+  resolution, predicate choice) is upstream of Dilmun and is where most real
+  error lives.
+* **The benchmark is a micro-benchmark**, not a standardized suite
+  (LoCoMo, LongMemEval, …), and it uses TF-IDF vectors rather than a neural
+  encoder. A neural encoder would change absolute similarity numbers, but not
+  the structural findings: similarity-only retrieval has no intrinsic recency
+  rule, no dedup across paraphrase, and no guaranteed determinism. Notably, a
+  vector store *can* recover current-value recall by attaching recency
+  metadata and sorting by it — but that recency-plus-tiebreak rule is exactly
+  canonicalization. The claim here is not that Dilmun is magic; it is that
+  these properties should be intrinsic to the memory model rather than bolted
+  on per query.
+* **Guarantees are test-backed, not proven.** Idempotence, determinism, and
+  merge commutativity/associativity are checked by the test suite, not by a
+  proof assistant.
 
 ---
 
-# Core API
+## Storage backends
+
+* **JSON vault** (default) — append-only `facts.jsonl` + `episodes.json`
+* **SQLite** — single-file database
 
 ```python
-memory.open_episode(id)
-
-memory.write_fact(
-    entity,
-    predicate,
-    value,
-    confidence=1.0
-)
-
-memory.get_context()
-
-memory.close_episode()
+DilmunMemory("./vault", backend="json")     # default
+DilmunMemory("./vault", backend="sqlite")
 ```
 
----
-
-# Storage Backends
-
-* JSON vault (default)
-* SQLite backend
-* Planned: PostgreSQL / DuckDB
-* Planned: distributed CRDT memory
+Both persist the same immutable facts and produce identical canonical state
+(`tests/test_memory.py::test_backends_agree`). Planned: PostgreSQL / DuckDB,
+distributed CRDT memory.
 
 ---
 
-# Applications
+## Formal properties
+
+Properties currently **verified by the test suite** (`tests/`):
+
+* **Canonicalization** — idempotent, deterministic, conflict-resolving.
+* **Forgetting** — idempotent projection, stable under repeated application.
+* **Merge** — commutative and associative (`merge(A,B) = merge(B,A)`,
+  `merge(merge(A,B),C) = merge(A,merge(B,C))`).
+* **Episodes** — partitioned state, non-interfering updates by default.
+* **Backends** — JSON and SQLite yield identical canonical context.
+
+These are stated as *test-backed*, not machine-checked. See Roadmap.
+
+---
+
+## Applications
+
+Downstream uses of the algebra:
 
 * Long-horizon AI agents
 * Robotics memory systems
@@ -325,50 +392,25 @@ memory.close_episode()
 
 ---
 
-# Formal Properties
+## Roadmap
 
-Dilmun operations are designed to satisfy:
-
-### Canonicalization
-
-* idempotent
-* deterministic
-* conflict-resolving
-
-### Forgetting
-
-* idempotent closure operator
-* stable under repeated application
-
-### Episode structure
-
-* partitioned memory space
-* non-interfering updates by default
-
-### Composition
-
-* graph-consistent relational inference
-* path-based derivation
-
----
-
-# Roadmap
-
+* Automatic predicate discovery / synonym induction
+* Provenance tracking per fact (partially present via `derived_from`)
+* Typed predicate system with value constraints
+* Temporal decay functions for `ν`
+* Query planner over the memory graph
 * Distributed memory synchronization (CRDT-based)
-* Provenance tracking per fact
-* Typed predicate system
-* Temporal decay functions
-* Query planner over memory graphs
-* Optional probabilistic inference layer
-* Formal verification of canonicalization + forgetting operators
+* **Formal verification** of the canonicalization, forgetting, and merge
+  properties in a proof assistant — currently these are only test-backed.
 
 ---
 
-# Philosophy
+## Philosophy
 
-Dilmun is not an embedding database or a chatbot plugin.
-
-It is a **deterministic memory algebra** for systems that must remember, reconcile, and evolve knowledge over time.
+Dilmun is not an embedding database or a chatbot plugin. It is a
+**deterministic algebra over persistent knowledge states** — a formal model
+of machine memory that remembers, reconciles, and evolves knowledge over
+time. The AI applications are what you build *on top* of that model.
 
 ---
 

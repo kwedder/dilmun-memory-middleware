@@ -31,7 +31,8 @@ memory.close_episode()
 ┌──────────────────────────────────────────────────┐
 │                   DilmunMemory                   │
 ├──────────────────────────────────────────────────┤
-│  operators: canonicalize (C) │ forget (F)        │
+│  operators: normalize (N)    │ canonicalize (C)  │
+│             forget (F)       │ merge             │
 │             compose (comp)   │ retrieve (score)  │
 ├──────────────────────────────────────────────────┤
 │  episodes: M = M0 (global) ∪ M1 ∪ ... ∪ Mk       │
@@ -43,11 +44,14 @@ memory.close_episode()
 ## Features
 
 - Immutable entity-predicate-value facts with confidence valuation
+- Predicate normalization (default + registry) so paraphrases collapse to one fact
 - Episode-partitioned memory with explicit cross-episode promotion
 - Deterministic, idempotent canonicalization (timestamp > confidence > insertion order)
 - Idempotent forgetting operator (expiry, low confidence, contradiction pressure)
+- Commutative, associative merge of two memory states
 - Relational (path) composition over the memory graph
 - Structured retrieval scoring: confidence + recency + graph centrality
+- Reproducible benchmark vs a TF-IDF vector-memory baseline (benchmarks/)
 
 ## Development
 
