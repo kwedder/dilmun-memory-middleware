@@ -1,6 +1,6 @@
 # Dilmun Memory Middleware
 
-A Python library for AI agents to maintain persistent, structured memory that transcends context windows.
+A deterministic, algebraically structured memory system for persistent AI agents.
 
 ## Core Value
 
@@ -9,43 +9,45 @@ A Python library for AI agents to maintain persistent, structured memory that tr
 ## Quick Start
 
 ```python
-from dilmun import DilmunMemoryMiddleware
+from dilmun import DilmunMemory
 
-middleware = DilmunMemoryMiddleware(vault_path="./memory")
-middleware.open_episode("my_session", ["chat", "tasks"])
+memory = DilmunMemory("./vault")
+memory.open_episode("my_session")
 
-# Store facts
-middleware.write_fact("user", "name", "Alice")
-middleware.write_fact("user", "preference", "blue", confidence=0.9)
+# Store facts — immutable 5-tuples (entity, predicate, value, timestamp, confidence)
+memory.write_fact("user", "name", "Alice")
+memory.write_fact("user", "preference", "blue", confidence=0.9)
 
-# Retrieve facts
-facts = middleware.get_context()
+# Retrieve the scored, canonicalized context
+context = memory.get_context()
 
 # Close session
-middleware.close_episode()
+memory.close_episode()
 ```
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────┐
-│            DilmunMemoryMiddleware            │
-├─────────────────────────────────────────────┤
-│  GradedMemoryRing  │  IdealForgetting       │
-│  (sessions)        │  (stale facts)         │
-├─────────────────────────────────────────────┤
-│              MemoryStore (file-based)        │
-│  fact/  decision/  episode/  conflict/       │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│                   DilmunMemory                   │
+├──────────────────────────────────────────────────┤
+│  operators: canonicalize (C) │ forget (F)        │
+│             compose (comp)   │ retrieve (score)  │
+├──────────────────────────────────────────────────┤
+│  episodes: M = M0 (global) ∪ M1 ∪ ... ∪ Mk       │
+├──────────────────────────────────────────────────┤
+│  backends: JSONVault (default) │ SQLiteBackend   │
+└──────────────────────────────────────────────────┘
 ```
 
 ## Features
 
-- Entity-predicate-value fact storage
-- Session-scoped memory with TTL
-- Wedderburn-Kasczinski conflict resolution
-- Confidence-weighted retrieval
-- Ring-theoretic forgetting
+- Immutable entity-predicate-value facts with confidence valuation
+- Episode-partitioned memory with explicit cross-episode promotion
+- Deterministic, idempotent canonicalization (timestamp > confidence > insertion order)
+- Idempotent forgetting operator (expiry, low confidence, contradiction pressure)
+- Relational (path) composition over the memory graph
+- Structured retrieval scoring: confidence + recency + graph centrality
 
 ## Development
 
@@ -55,13 +57,13 @@ pip install -e .
 
 # Run tests
 pytest tests/
-
-# CLI
-python -m dilmun.cli --help
+# or without pytest:
+python tests/test_operators.py && python tests/test_memory.py
 ```
 
 ## Documentation
 
+- [README.md](README.md) - The memory algebra, formal properties, and API
 - [PROJECT.md](.planning/PROJECT.md) - Project context
 - [REQUIREMENTS.md](.planning/REQUIREMENTS.md) - Detailed requirements
 - [ROADMAP.md](.planning/ROADMAP.md) - Execution roadmap
