@@ -1,125 +1,351 @@
-# Dilmun Memory Middleware
+Dilmun Memory Middleware
 
-A Python library for AI agents to maintain persistent, structured memory that transcends context windows. Uses ring-theoretic mathematics for automatic conflict resolution and forgetting.
+A deterministic, algebraically structured memory system for persistent AI agents.
 
-## The Problem
+Overview
 
-AI agents lose context between sessions. Traditional approaches either:
+Dilmun Memory Middleware is a persistent memory layer designed for AI systems that must operate across long time horizons, multiple sessions, and evolving knowledge states.
 
-- Fit everything in expensive context windows
-- Lose important information between runs
+Instead of treating memory as:
 
-## The Solution
+raw text logs, or
+embedding-based retrieval
 
-Dilmun Memory Middleware stores memory as structured facts that persist across sessions. It uses novel ring-theoretic mathematics to:
+Dilmun models memory as a structured algebraic system of immutable facts, governed by deterministic operations for:
 
-- Automatically resolve conflicts via temporal ordering
-- Forget stale facts via ideal-theoretic quotients
-- Weight facts by confidence for reliable recall
+merging
+conflict resolution
+forgetting
+composition
+retrieval
+Core Idea
 
-## Quick Start
+Memory is not a database.
 
-```python
-from dilmun import DilmunMemoryMiddleware
+Memory is a structured algebraic object.
 
-# Initialize
-middleware = DilmunMemoryMiddleware(vault_path="./memory")
+We define a memory state:
 
-# Open a session
-middleware.open_episode("chat_123", ["conversation", "user_preference"])
+M={f
+1
+	​
 
-# Store facts
-middleware.write_fact("user", "name", "Alice")
-middleware.write_fact("user", "preference", "blue", confidence=0.9)
+,f
+2
+	​
 
-# Retrieve context
-facts = middleware.get_context()
+,...,f
+n
+	​
 
-# Close session
-middleware.close_episode()
-```
+}
 
-## Features
+where each fact is:
 
-- **Entity-Predicate-Value Facts**: Structured memory storage
-- **Session Scoping**: Episode contexts for isolation
-- **Conflict Resolution**: Wedderburn-Kasczinski temporal ordering
-- **Confidence Weighting**: Module-valued fact reliability
-- **Automatic Forgetting**: Ideal-theoretic stale fact removal
+f=(e,p,v,t,ν)
+e: entity
+p: predicate
+v: value
+t: timestamp
+ν(f): confidence valuation in [0,1]
+Design Principles
+Facts are immutable
+Updates create new facts, not mutations
+Conflicts are resolved deterministically
+Memory transformations are idempotent
+Stale knowledge is removed via formal operators
+Retrieval is structured, not probabilistic guessing
+Installation
+pip install dilmun
+Quick Start
+from dilmun import DilmunMemory
 
-## Ring Theory
+memory = DilmunMemory("./vault")
 
-The middleware implements **graded rings** with the following mathematical structure:
+memory.open_episode("chat_001")
 
-### Graded Ring Decomposition (R = ⊕ₙ Rₙ)
+memory.write_fact(
+    entity="user",
+    predicate="favorite_color",
+    value="blue",
+    confidence=0.95
+)
 
-Each session (episode) forms a **homogeneous component** Rₙ in the graded ring:
+memory.write_fact(
+    entity="user",
+    predicate="location",
+    value="Miami"
+)
 
-```
-R = R₀ ⊕ R₁ ⊕ R₂ ⊕ ... ⊕ Rₙ
+context = memory.get_context()
 
-Where:
-- R₀ = Global facts (accessible across all sessions)
-- R₁ = Session 1 facts
-- R₂ = Session 2 facts
-- ...
-```
+memory.close_episode()
+Algebraic Structure of Memory
+1. Memory State Space
 
-This allows natural session isolation and controlled information flow between contexts.
+The memory system is a finite set:
 
-### Ideal-Theoretic Forgetting (R/I)
+M={f
+1
+	​
 
-Stale facts form an **ideal** I ⊂ R. The quotient ring R/I represents memory after forgetting:
+,f
+2
+	​
 
-```
-I = {facts | age(f) > threshold OR confidence(f) < min_confidence}
-R/I = R with stale facts "collapsed away"
-```
+,...,f
+n
+	​
 
-This is the mathematical foundation for automatic forgetting - facts in the ideal are systematically removed via the quotient operation.
+}
 
-### Module-Valued Confidence
+Each fact belongs to a structured state space.
 
-Each fact has a **confidence weight** c ∈ [0,1] representing reliability. This acts as a scalar multiplication on the free module:
+2. Valuation Function (Confidence)
 
-```
-c · fact ≡ fact with weight c
+We define a valuation:
 
-Operations:
-- Fact comparison: c₁ · f₁ + c₂ · f₂ → weighted average
-- Confidence propagation: confidence propagates through tensor products
-```
+ν:M→[0,1]
 
-### Wedderburn-Kasczinski Conflict Resolution
+This assigns reliability to each fact.
 
-When two facts conflict (same entity, predicate, different values), temporal ordering resolves:
+Properties:
 
-```
-fact₁ = (e, p, v₁, t₁)
-fact₂ = (e, p, v₂, t₂)
+Higher values = stronger evidence
+Used for ranking and conflict resolution
+Composable across updates
+3. Episode Partitioning (Graded Structure)
 
-If t₂ > t₁: fact₂ is canonical, fact₁ ∈ I (ideal for resolution)
-```
+Memory is partitioned into episodes:
 
-This implements the Wedderburn-Kasczski theorem: in a semisimple ring, conflicting elements can be resolved by selecting the "newest" representative under the ring's natural grading.
+M=M
+0
+	​
 
-### Tensor Product Relationships (Fact ⊗ Fact → Relationship)
+∪M
+1
+	​
 
-Two facts can form a relationship via tensor product:
+∪⋯∪M
+k
+	​
 
-```
-f₁ ⊗ f₂ = relationship(f₁.entity, f₂.entity, f₁.predicate, f₂.predicate)
-```
+M
+0
+	​
 
-This enables automatic inference and connection discovery between related facts.
+: global memory
+M
+i
+	​
 
-## Development
+: episode memory
 
-```bash
-pip install -e .
-python -m pytest tests/
-```
+This induces a graded structure over time, where:
 
-## License
+facts are isolated by context
+cross-episode promotion is explicit
+contamination is prevented by default
+4. Canonicalization Operator
+
+Conflicts occur when two facts share:
+
+entity
+predicate
+differing values
+
+Example:
+
+(user, city, Miami)
+(user, city, Orlando)
+
+We define a canonicalization operator:
+
+C:M→M
+
+Selection rule:
+
+Highest timestamp
+Highest confidence
+Stable insertion order (tie-breaker)
+Canonical Memory Property
+Idempotence
+C(C(M))=C(M)
+Determinism
+M
+1
+	​
+
+=M
+2
+	​
+
+⇒C(M
+1
+	​
+
+)=C(M
+2
+	​
+
+)
+5. Forgetting Operator (Closure System)
+
+Instead of deletion, Dilmun uses a transformation:
+
+F:M→M
+
+A fact is removed if it satisfies:
+
+expired timestamp
+low confidence
+contradiction pressure (optional policy)
+Properties
+Idempotence
+F(F(M))=F(M)
+Monotonic reduction of stale information
+
+This defines a closure system over memory space.
+
+6. Memory Graph Structure
+
+Facts induce a directed labeled graph:
+
+Alice ──likes──> Coffee
+Coffee ──served_at──> Cafe
+
+Formally:
+
+nodes = entities
+edges = predicates
+values = labeled relations
+
+Retrieval becomes graph traversal instead of text search.
+
+7. Composition of Facts (Relational Product)
+
+Instead of tensor products, Dilmun uses relational composition.
+
+Given:
+
+(A, likes, B)
+(B, category, C)
+
+We derive:
+
+(A, likes_category, C)
+
+Defined as:
+
+comp(f
+1
+	​
+
+,f
+2
+	​
+
+)
+
+where composition is valid when:
+
+f
+1
+	​
+
+.v=f
+2
+	​
+
+.e
+
+This is a path composition operator over the memory graph.
+
+8. Retrieval Function
+
+Context retrieval is a scoring function:
+
+score(f)=w
+1
+	​
+
+ν(f)+w
+2
+	​
+
+⋅recency+w
+3
+	​
+
+⋅graph_centrality
+
+Returned facts are:
+
+arg
+M
+max
+	​
+
+score(f)
+
+This replaces embedding similarity with structured scoring.
+
+Core API
+memory.open_episode(id)
+
+memory.write_fact(
+    entity,
+    predicate,
+    value,
+    confidence=1.0
+)
+
+memory.get_context()
+
+memory.close_episode()
+Storage Backends
+JSON vault (default)
+SQLite backend
+Planned: PostgreSQL / DuckDB
+Planned: distributed CRDT memory
+Applications
+Long-horizon AI agents
+Robotics memory systems
+IoT device cognition layers
+Multi-agent coordination
+Persistent research assistants
+Workflow automation systems
+Formal Properties
+
+Dilmun operations are designed to satisfy:
+
+Canonicalization
+idempotent
+deterministic
+conflict-resolving
+Forgetting
+idempotent closure operator
+stable under repeated application
+Episode structure
+partitioned memory space
+non-interfering updates by default
+Composition
+graph-consistent relational inference
+path-based derivation
+Roadmap
+Distributed memory synchronization (CRDT-based)
+Provenance tracking per fact
+Typed predicate system
+Temporal decay functions
+Query planner over memory graphs
+Optional probabilistic inference layer
+Formal verification of canonicalization + forgetting operators
+Philosophy
+
+Dilmun is not an embedding database or a chatbot plugin.
+
+It is a deterministic memory algebra for systems that must remember, reconcile, and evolve knowledge over time.
+
+License
 
 MIT
