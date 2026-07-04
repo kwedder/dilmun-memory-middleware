@@ -49,6 +49,7 @@ memory.close_episode()
 - Deterministic, idempotent canonicalization (timestamp > confidence > insertion order)
 - Idempotent forgetting operator (expiry, low confidence, contradiction pressure)
 - Commutative, associative merge of two memory states
+- Distributed LWW-Map CRDT layer (dilmun/crdt.py): replica-consistent tie-break + tombstoned removal, convergent under any delivery order
 - Relational (path) composition over the memory graph
 - Structured retrieval scoring: confidence + recency + graph centrality
 - Reproducible benchmark vs a TF-IDF vector-memory baseline (benchmarks/)

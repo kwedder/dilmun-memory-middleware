@@ -35,6 +35,7 @@ from .operators import (
 )
 from .normalization import PredicateRegistry, default_normalize, normalize
 from .backends import Backend, JSONVault, SQLiteBackend
+from .crdt import LWWMap, Tombstone, merge_all
 
 # Legacy markdown-vault store and its compression pipeline.
 from .memory_store import MemoryStore
@@ -62,6 +63,9 @@ __all__ = [
     "Backend",
     "JSONVault",
     "SQLiteBackend",
+    "LWWMap",
+    "Tombstone",
+    "merge_all",
     "MemoryStore",
     "compress_notes",
     "CompressionError",

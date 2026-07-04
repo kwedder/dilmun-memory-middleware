@@ -123,7 +123,7 @@ Dilmun
  ├── Rewrite algebra        Normalize · Canonicalize · Forget · Compose · Retrieve
  │                          → confluent normalizing core {N, C}; fixed-order semantics
  ├── Graph memory           facts = labeled edges e —p→ v; composition + centrality
- └── CRDT merge subsystem   Merge = a Last-Write-Wins Map (a proven semilattice join)
+ └── CRDT merge subsystem   Merge = a Last-Write-Wins Map; multi-replica convergent (dilmun/crdt.py)
 ```
 
 The **operators run in a fixed order** — `Normalize → Canonicalize → Forget →
@@ -324,11 +324,31 @@ associative   merge(merge(A,B), C)     = merge(A, merge(B,C))
 
 These are **proved by argument** (they follow from `C` being a per-key `max`
 over set union — see [MODEL.md](MODEL.md) §6), with randomized tests kept as
-regression checks. This is the piece that makes the *distributed* memory
-roadmap concrete: the convergence machinery already exists. The remaining gap
-is honest — the `insertion-order` tie-break is per-store, not globally unique,
-so a true multi-replica CRDT needs a replica-consistent tie-break (e.g.
-`(timestamp, replica_id)`) and CRDT-safe removal.
+regression checks.
+
+**Multi-replica convergence (implemented).** `dilmun/crdt.py` promotes this to
+a genuine multi-replica CvRDT — a `LWWMap` that closes the two gaps a
+distributed store needs:
+
+```python
+from dilmun import LWWMap
+
+a = LWWMap.from_facts(replica_a_facts)
+b = LWWMap.from_facts(replica_b_facts)
+converged = a.merge(b)            # order- and topology-independent
+b2 = b.remove("user", "city", timestamp=5)   # CRDT-safe tombstoned delete
+```
+
+* **Replica-consistent tie-break.** Ties break on the fact's `id` (a uuid that
+  travels with the fact), not the per-store `insertion-order`, so every replica
+  picks the same winner. In `benchmarks/crdt_convergence.py`, 6 replicas
+  converge under random delivery order + gossip in **100%** of trials; a naive
+  `seq`-style tie-break converges in only **75.5%**.
+* **Tombstoned removal.** Deletes are timestamped and merge-safe: a dominating
+  delete is never resurrected, and a newer write after a delete re-adds the key.
+
+Still open (honestly): this is the CvRDT *state and merge*, not a network — no
+transport, anti-entropy, causality tracking, or tombstone GC yet.
 
 The overall algebra is *larger* than this CRDT: it also includes
 normalization, forgetting, and graph composition, which the merge subsystem
@@ -511,7 +531,9 @@ Downstream uses of the algebra:
 * Typed predicate system with value constraints
 * Temporal decay functions for `ν`
 * Query planner over the memory graph
-* Distributed memory synchronization (CRDT-based)
+* Distributed memory synchronization — CvRDT state + merge done
+  (`dilmun/crdt.py`); remaining: network transport, anti-entropy, causality
+  tracking, tombstone GC
 * **Formal verification** of the canonicalization, forgetting, and merge
   properties in a proof assistant — currently these are only test-backed.
 

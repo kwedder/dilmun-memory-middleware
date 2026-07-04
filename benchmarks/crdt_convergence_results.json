@@ -1,0 +1,9 @@
+{
+  "seed": 20260704,
+  "replicas": 6,
+  "trials": 400,
+  "ops_per_trial": 60,
+  "timestamp_tie_rate": 0.35,
+  "crdt_global_tiebreak_convergence": 1.0,
+  "naive_seq_tiebreak_convergence": 0.755
+}

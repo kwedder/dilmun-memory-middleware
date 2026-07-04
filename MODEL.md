@@ -22,8 +22,8 @@ Every claim below carries an explicit confidence level. In brief:
 
 | | Guarantee | Where |
 |---|---|---|
-| **Proved** | Merge is a semilattice (CvRDT) join · `K=C∘F` is an idempotent projection · `C` and `F` cannot commute · termination | §5–§6 |
-| **Test-backed** | Determinism · idempotence of `N`/`C`/`F` · confluence of `{N,C}` | §5, §7 |
+| **Proved** | Merge is a semilattice (CvRDT) join · `K=C∘F` is an idempotent projection · `C` and `F` cannot commute · replica convergence · termination | §5–§6 |
+| **Test-backed** | Determinism · idempotence of `N`/`C`/`F` · confluence of `{N,C}` · 6-replica convergence (100%) | §5–§7 |
 | **False by design** | Full `{N,C,F}` confluence (~40%) — resolved by fixed evaluation order, not pretended away | §5 |
 | **Inspiration only** | Wedderburn / ring theory — an analogy, never a foundation | §8 |
 
@@ -379,12 +379,40 @@ union as a max:
 The randomized tests (100%) are kept as regression checks on top of the proof,
 per the "prove *and* fuzz" discipline. ∎
 
-*Honest caveat (open).* `seq` is a per-store insertion index, not globally
-unique across replicas, so the tie-break is not yet replica-consistent. For a
-genuine distributed CRDT the final tie-break must become globally unique
-(e.g. `(t, replica_id)`), and removal (`F`) needs CRDT-safe semantics
-(tombstones). Today Dilmun is an LWW-Map **on a single logical clock**; the
-distributed-CRDT roadmap item is the work of closing this gap.
+### 6.1 From single-store to multi-replica (implemented)
+
+Two gaps stood between the single-store merge and a genuine multi-replica
+CvRDT. Both are now closed in `dilmun/crdt.py` (opt-in; the default store is
+unchanged).
+
+* **Replica-consistent tie-break.** The single-store final tie-break is `seq`,
+  a per-store insertion index — not consistent across replicas. The CRDT layer
+  instead orders entries by `(timestamp, confidence, id)`, and `id` is a uuid
+  that travels with the fact, identical on every replica. So all replicas pick
+  the same winner regardless of local delivery order.
+* **CRDT-safe removal.** Deletions are **tombstones**: a timestamped delete
+  that participates in merges. A key is live iff its winning entry is a put, so
+  a delete that dominates in time is not resurrected by merging with a replica
+  that still holds the fact; a *newer* put after a delete correctly re-adds it.
+
+> **Convergence.** Replicas that have absorbed the same set of operations reach
+> identical state under any delivery order and any merge topology.
+>
+> *Argument.* Each replica's state is, per key, the `max` entry over the ops it
+> has absorbed, under the global total order `(timestamp, confidence, id)`.
+> `max` is order- and grouping-independent, so any two replicas that have seen
+> the same op set compute the same per-key maximum. ∎  *(test-backed: 6
+> replicas converge in 100% of 400 randomized trials,
+> `benchmarks/crdt_convergence.py`.)*
+
+The measurement also shows why the global tie-break is necessary: a naive
+replica that keeps `seq`-style "first-delivered wins" on a timestamp tie
+converges in only **75.5%** of the same trials — a quarter of them diverge.
+
+*What is still open.* This is the CvRDT *state and merge*, not a network: there
+is no transport, anti-entropy schedule, or vector-clock causality tracking
+yet. Tombstones also accumulate (no garbage collection). And, as everywhere in
+this document, convergence is test-backed, not machine-checked.
 
 ---
 
@@ -395,6 +423,7 @@ distributed-CRDT roadmap item is the work of closing this gap.
 | Immutability | facts are never mutated, only appended | by construction |
 | Termination | every reduction sequence halts | proved by argument (§5) |
 | Merge convergence | `G` obeys the semilattice / CvRDT laws | **proved by argument (§6)** + test-backed (100%) |
+| Replica convergence | replicas with the same op set reach identical state | **proved by argument (§6.1)** + test-backed (100%, 6 replicas) |
 | Reducer idempotence | `K = C∘F` satisfies `K(K(M)) = K(M)` | **proved by argument (§5.2)** + test-backed (100%) |
 | Selection/filter non-commutation | `C` and `F` cannot commute | proved by argument (§5.1) |
 | Referential stability | each canonical predicate = one identifier in Σ | by construction |
