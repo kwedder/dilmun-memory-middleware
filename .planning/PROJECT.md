@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A Python library for AI agents to maintain persistent, structured memory that transcends context windows. Uses ring-theoretic mathematics (Wedderburn-Kasczinski) for automatic conflict resolution and forgetting.
+A Python library for AI agents to maintain persistent, structured memory that transcends context windows. Modeled as a deterministic state-rewrite algebra over immutable labeled graphs (see MODEL.md): normalization + canonicalization form a confluent reduction to canonical form, and merge is a join-semilattice / LWW-Map CRDT. (Earlier drafts framed this as "ring-theoretic (Wedderburn-Kasczinski)"; that was decorative branding, not the actual structure — the conflict rule is last-write-wins with a total-order tie-break.)
 
 ## Core Value
 
@@ -54,10 +54,10 @@ This extraction packages the proven middleware patterns into a reusable library.
 
 | Decision | Rationale | Outcome |
 | -------- | --------- | ------- |
-| Ring-theoretic foundation | Novel approach to conflict resolution | ✓ Implemented |
-| Session grading | Natural expiration via graded components | ✓ Implemented |
-| Confidence weighting | Module-valued facts for reliability | ✓ Implemented |
-| File-based storage | Obsidian vault compatibility | ✓ Verified |
+| State-rewrite algebra (was "ring-theoretic") | Deterministic reduction to canonical form; honest framing over borrowed prestige | ✓ Implemented (see MODEL.md) |
+| Episode partition (was "session grading") | Context isolation; a partition, not a graded ring | ✓ Implemented |
+| Confidence valuation | Ranking valuation for deterministic tie-breaks | ✓ Implemented |
+| Pluggable storage (JSON default, SQLite) | Durable, backend-agnostic canonical state | ✓ Verified |
 
 ---
 *Last updated: 2026-06-20 - v1 complete*

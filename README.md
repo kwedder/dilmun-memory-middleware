@@ -107,7 +107,14 @@ memory.close_episode()
 ## The memory algebra
 
 Dilmun is defined by a small set of operators over memory states. Each has a
-precise signature and precise behaviour.
+precise signature and precise behaviour. For the full formal treatment —
+operators specified by their properties, the reduction-system analysis, and
+the honest status of every claim — see **[MODEL.md](MODEL.md)**. In one line:
+
+> Dilmun is a **deterministic state-rewrite algebra over immutable labeled
+> graphs** — not a ring, not a lattice, not a category. Where a classical
+> structure genuinely emerges (the merge semilattice), it is named; where it
+> does not, it is not claimed.
 
 | Operator | Signature | What it does |
 |---|---|---|
@@ -315,6 +322,30 @@ in memory while Dilmun persists every write to disk and scans on query.
 Dilmun trades raw throughput for durability and determinism; neither store is
 performance-tuned, so treat latency as order-of-magnitude only.
 
+### Which algebraic framing is earned?
+
+A second benchmark (`benchmarks/algebra_properties.py`) tests, over 3 000
+random states, which mathematical properties Dilmun's operators actually
+satisfy — deciding empirically between the "rewrite system" and "CRDT" lenses
+rather than asserting either:
+
+| Property | Lens | Holds |
+|---|---|---:|
+| Determinism of canonicalization | — | 100% |
+| Idempotence of `N`, `C`, `F` | — | 100% |
+| **Confluence of core `{Normalize, Canonicalize}`** | rewrite system | **100%** |
+| **Confluence of full `{Normalize, Canonicalize, Forget}`** | rewrite system | **39.7%** |
+| Merge idempotent / commutative / associative | semilattice / CRDT | 100% |
+
+The verdict: the **normalizing core is a confluent reduction system** (unique
+canonical normal form regardless of order), and **merge is a genuine
+join-semilattice / LWW-Map CRDT**. But **Forget breaks confluence** — the
+confidence floor and the recency ranking disagree about which fact survives,
+so `C` and `F` do not commute. Dilmun handles this by fixing the evaluation
+order (`C ∘ F`) rather than pretending the rule set is confluent. Full
+derivation, the counterexample, and the honest status of each claim are in
+[MODEL.md](MODEL.md) §5–§7.
+
 ---
 
 ## Limitations
@@ -405,12 +436,33 @@ Downstream uses of the algebra:
 
 ---
 
+## Mathematical inspiration (not foundation)
+
+Dilmun borrows a *philosophy* from ring theory — not a theorem. Wedderburn's
+little theorem (every finite division ring is commutative), and the exposition
+in Kaczynski's 1964 note "Another Proof of Wedderburn's Theorem," share a
+shape of argument worth stealing: **a structure that looks maximally free
+turns out to be rigid** — finiteness alone forces a non-commutative object to
+commute.
+
+Dilmun aims at the analogous move for *memory*: messy, redundant,
+contradictory input is forced — by immutability plus deterministic reduction —
+into a rigid canonical form, and operations that look order-dependent (merge)
+turn out to be order-independent. That is the entire connection, and it is an
+**analogy**. Dilmun's objects are labeled graphs and rewrite operators, not
+division rings; we do not claim Wedderburn as a mechanism or a correctness
+argument. The algebra in [MODEL.md](MODEL.md) is meant to stand on its own
+definitions. (Earlier drafts named a "Wedderburn-Kasczinski" resolution rule
+in the code; that was decorative and has been removed — the rule is
+last-write-wins with a total-order tie-break, described plainly.)
+
 ## Philosophy
 
 Dilmun is not an embedding database or a chatbot plugin. It is a
-**deterministic algebra over persistent knowledge states** — a formal model
-of machine memory that remembers, reconciles, and evolves knowledge over
-time. The AI applications are what you build *on top* of that model.
+**deterministic state-rewrite algebra over persistent knowledge states** — a
+formal model of machine memory that remembers, reconciles, and evolves
+knowledge over time. The AI applications are what you build *on top* of that
+model.
 
 ---
 

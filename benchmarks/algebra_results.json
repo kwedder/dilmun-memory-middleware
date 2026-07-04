@@ -1,0 +1,72 @@
+{
+  "seed": 20260704,
+  "trials": 3000,
+  "state_size": 12,
+  "min_confidence_floor": 0.5,
+  "properties": {
+    "determinism_C": 1.0,
+    "idempotence_N": 1.0,
+    "idempotence_C": 1.0,
+    "idempotence_F": 1.0,
+    "confluence_NC": 1.0,
+    "confluence_NCF": 0.397,
+    "merge_idempotent": 1.0,
+    "merge_commutative": 1.0,
+    "merge_associative": 1.0
+  },
+  "counterexamples": {
+    "confluence_NCF": {
+      "NCF": [
+        "user0.OWNS=Tampa",
+        "user0.city=Orlando",
+        "user1.OWNS=Tampa",
+        "user3.city=Tampa",
+        "user4.OWNS=Naples",
+        "user5.OWNS=Orlando"
+      ],
+      "NFC": [
+        "user0.OWNS=Tampa",
+        "user0.city=Orlando",
+        "user1.OWNS=Tampa",
+        "user3.city=Tampa",
+        "user4.OWNS=Naples",
+        "user4.city=Tampa",
+        "user5.OWNS=Orlando"
+      ],
+      "CNF": [
+        "user0.OWNS=Tampa",
+        "user0.city=Orlando",
+        "user1.OWNS=Tampa",
+        "user3.city=Tampa",
+        "user4.OWNS=Naples",
+        "user5.OWNS=Orlando"
+      ],
+      "CFN": [
+        "user0.OWNS=Tampa",
+        "user0.city=Orlando",
+        "user1.OWNS=Tampa",
+        "user3.city=Tampa",
+        "user4.OWNS=Naples",
+        "user5.OWNS=Orlando"
+      ],
+      "FNC": [
+        "user0.OWNS=Tampa",
+        "user0.city=Orlando",
+        "user1.OWNS=Tampa",
+        "user3.city=Tampa",
+        "user4.OWNS=Naples",
+        "user4.city=Tampa",
+        "user5.OWNS=Orlando"
+      ],
+      "FCN": [
+        "user0.OWNS=Tampa",
+        "user0.city=Orlando",
+        "user1.OWNS=Tampa",
+        "user3.city=Tampa",
+        "user4.OWNS=Naples",
+        "user4.city=Tampa",
+        "user5.OWNS=Orlando"
+      ]
+    }
+  }
+}
