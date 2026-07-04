@@ -1,0 +1,18 @@
+{
+  "seed": 20260704,
+  "trials": 3000,
+  "state_size": 12,
+  "confidence_floor": 0.5,
+  "algebraic_axis": {
+    "confluence_{N,C,F_global}": 0.4033,
+    "confluence_{N,C,F_ranked}": 0.4937
+  },
+  "composite_reducer_K": {
+    "K=C\u2218F_global_idempotent": 1.0,
+    "K=C\u2218F_ranked_idempotent": 1.0
+  },
+  "semantic_axis": {
+    "K=C\u2218F_global_matches_intended_strict": 1.0,
+    "K=C\u2218F_ranked_matches_intended_strict": 0.0193
+  }
+}

@@ -87,10 +87,28 @@ def test_merge_semilattice_laws():
     assert triples(merge(merge(A, B), Cc)) == triples(merge(A, merge(B, Cc)))  # assoc
 
 
+def test_composite_reducer_K_is_idempotent():
+    """K = C∘F is an idempotent projection even though C and F don't commute
+    (MODEL.md §5.2). Filter, then canonicalize; reapplying changes nothing."""
+    F = lambda s: forget(s, now=100.0, min_confidence=0.5)
+    K = lambda s: canonicalize(F(s))
+    m = [
+        fact("user", "city", "X", t=9, c=0.2, seq=0),      # noisy newest
+        fact("user", "city", "Tampa", t=1, c=0.9, seq=1),  # trusted older
+        fact("user", "name", "Alice", t=2, c=0.4, seq=2),  # below floor
+    ]
+    once = triples(K(m))
+    twice = triples(K(K(m)))
+    assert once == twice
+    # semantics: trust, then take the latest → Tampa survives, X and Alice gone
+    assert once == frozenset({("user", "city", "Tampa")})
+
+
 ALL_TESTS = [
     test_core_NC_is_confluent,
     test_canonicalize_and_forget_do_not_commute,
     test_merge_semilattice_laws,
+    test_composite_reducer_K_is_idempotent,
 ]
 
 if __name__ == "__main__":

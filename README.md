@@ -116,6 +116,20 @@ the honest status of every claim — see **[MODEL.md](MODEL.md)**. In one line:
 > structure genuinely emerges (the merge semilattice), it is named; where it
 > does not, it is not claimed.
 
+Three layers, three kinds of structure:
+
+```
+Dilmun
+ ├── Rewrite algebra        Normalize · Canonicalize · Forget · Compose · Retrieve
+ │                          → confluent normalizing core {N, C}; fixed-order semantics
+ ├── Graph memory           facts = labeled edges e —p→ v; composition + centrality
+ └── CRDT merge subsystem   Merge = a Last-Write-Wins Map (a proven semilattice join)
+```
+
+The **operators run in a fixed order** — `Normalize → Canonicalize → Forget →
+Compose → Retrieve` — and that pipeline *is* the semantics, the way a language
+defines meaning by a fixed evaluation strategy (see [MODEL.md](MODEL.md) §5.2).
+
 | Operator | Signature | What it does |
 |---|---|---|
 | **Normalize** | `N(M, registry) → M` | Map predicate aliases onto canonical predicates |
@@ -286,6 +300,42 @@ with a structured, explainable score.
 
 ---
 
+## The merge subsystem is a CRDT
+
+This is Dilmun's strongest *formal* result, so it gets its own section.
+
+Per key `(entity, predicate)`, canonicalization keeps the fact that is maximal
+under the total order `timestamp > confidence > insertion-order`. That is
+exactly a **Last-Write-Wins Register**; a whole memory state is a map of them,
+i.e. a **LWW-Map** — a standard state-based CRDT (CvRDT). Merge is its
+pointwise join:
+
+```
+merge(M₁, M₂) = C(M₁ ∪ M₂)
+```
+
+and it obeys the three semilattice / CvRDT convergence laws:
+
+```
+idempotent    merge(M, M)              = M
+commutative   merge(M, N)              = merge(N, M)
+associative   merge(merge(A,B), C)     = merge(A, merge(B,C))
+```
+
+These are **proved by argument** (they follow from `C` being a per-key `max`
+over set union — see [MODEL.md](MODEL.md) §6), with randomized tests kept as
+regression checks. This is the piece that makes the *distributed* memory
+roadmap concrete: the convergence machinery already exists. The remaining gap
+is honest — the `insertion-order` tie-break is per-store, not globally unique,
+so a true multi-replica CRDT needs a replica-consistent tie-break (e.g.
+`(timestamp, replica_id)`) and CRDT-safe removal.
+
+The overall algebra is *larger* than this CRDT: it also includes
+normalization, forgetting, and graph composition, which the merge subsystem
+does not describe. Merge is the one clean classical substructure inside it.
+
+---
+
 ## Benchmarks
 
 `benchmarks/benchmark.py` compares Dilmun against a TF-IDF cosine-similarity
@@ -341,10 +391,31 @@ The verdict: the **normalizing core is a confluent reduction system** (unique
 canonical normal form regardless of order), and **merge is a genuine
 join-semilattice / LWW-Map CRDT**. But **Forget breaks confluence** — the
 confidence floor and the recency ranking disagree about which fact survives,
-so `C` and `F` do not commute. Dilmun handles this by fixing the evaluation
-order (`C ∘ F`) rather than pretending the rule set is confluent. Full
-derivation, the counterexample, and the honest status of each claim are in
-[MODEL.md](MODEL.md) §5–§7.
+so `C` and `F` do not commute.
+
+The harness produced a minimal witness, worth reading as a worked example:
+
+```
+Two facts about one key (user, city):
+    (user, city, X,     t = newest, confidence = 0.2)   ← latest, but noisy
+    (user, city, Tampa, t = older,  confidence = 0.9)   ← older, but trusted
+
+  Canonicalize → Forget :  C keeps X (newest); F drops X (0.2 < 0.5)  ⇒  city forgotten
+  Forget → Canonicalize :  F drops X (0.2 < 0.5); C keeps Tampa       ⇒  city = Tampa
+```
+
+Two valid orders, two different memories. This is not a bug the tests missed —
+it is the system being *characterized*. The obstruction is structural (any
+selection `C` plus any filter `F` that can delete `C`'s winner will disagree;
+proof in [MODEL.md](MODEL.md) §5.1), so Dilmun fixes the evaluation order
+(`Forget → Canonicalize`) and treats that composite `K = C∘F` as the
+semantics — a **provably idempotent projection** (§5.2), not a workaround.
+
+We tested the tempting "fix" too: a confidence-aware Forget was prototyped as a
+research branch and **rejected** — it nudged confluence only 40%→49% (still not
+confluent) while destroying semantic quality (it retains the stale facts the
+floor exists to remove). Kept the current Forget; recorded the branch as closed
+in [MODEL.md](MODEL.md) §5.3. Full status of every claim: [MODEL.md](MODEL.md) §7.
 
 ---
 
@@ -373,9 +444,10 @@ Being honest about where this abstraction does and doesn't help:
   canonicalization. The claim here is not that Dilmun is magic; it is that
   these properties should be intrinsic to the memory model rather than bolted
   on per query.
-* **Guarantees are test-backed, not proven.** Idempotence, determinism, and
-  merge commutativity/associativity are checked by the test suite, not by a
-  proof assistant.
+* **Guarantees are mixed proved / test-backed, none machine-checked.** The
+  merge semilattice laws and `K=C∘F` idempotence are proved by argument;
+  idempotence, determinism, and core confluence are test-backed only. None are
+  verified in a proof assistant yet. See [MODEL.md](MODEL.md) §7.
 
 ---
 
@@ -397,16 +469,25 @@ distributed CRDT memory.
 
 ## Formal properties
 
-Properties currently **verified by the test suite** (`tests/`):
+Each claim carries its confidence level; the full table is [MODEL.md](MODEL.md) §7.
 
-* **Canonicalization** — idempotent, deterministic, conflict-resolving.
-* **Forgetting** — idempotent projection, stable under repeated application.
-* **Merge** — commutative and associative (`merge(A,B) = merge(B,A)`,
-  `merge(merge(A,B),C) = merge(A,merge(B,C))`).
-* **Episodes** — partitioned state, non-interfering updates by default.
+**Proved by argument** (written proofs in MODEL.md):
+
+* **Merge** is a semilattice / LWW-Map CvRDT join — idempotent, commutative,
+  associative (§6).
+* **`K = C∘F`** (the retrieval reducer) is an idempotent projection (§5.2).
+* **`C` and `F` cannot commute** — structural, not incidental (§5.1).
+* **Termination** — every reduction sequence halts (§5).
+
+**Test-backed** (randomized regression, not machine-checked):
+
+* **Canonicalization / Forgetting** — idempotent and deterministic.
+* **Core confluence** — `{Normalize, Canonicalize}` reach a unique normal form.
 * **Backends** — JSON and SQLite yield identical canonical context.
 
-These are stated as *test-backed*, not machine-checked. See Roadmap.
+**False by design:** full `{N, C, F}` confluence — resolved by fixed
+evaluation order (§5). Promoting the test-backed rows to machine-checked
+proofs is the "formal verification" roadmap item.
 
 ---
 

@@ -16,6 +16,20 @@ The state is a finite graph of immutable facts; the algebra is a set of
 operators that rewrite the state toward canonical normal forms while
 preserving explicit invariants (determinism, idempotence, semilattice merge).
 
+### What is actually established (read this first)
+
+Every claim below carries an explicit confidence level. In brief:
+
+| | Guarantee | Where |
+|---|---|---|
+| **Proved** | Merge is a semilattice (CvRDT) join · `K=C∘F` is an idempotent projection · `C` and `F` cannot commute · termination | §5–§6 |
+| **Test-backed** | Determinism · idempotence of `N`/`C`/`F` · confluence of `{N,C}` | §5, §7 |
+| **False by design** | Full `{N,C,F}` confluence (~40%) — resolved by fixed evaluation order, not pretended away | §5 |
+| **Inspiration only** | Wedderburn / ring theory — an analogy, never a foundation | §8 |
+
+The full status table with exact wording is §7. "Test-backed" means checked
+empirically over randomized inputs, not machine-checked.
+
 ---
 
 ## 0. The object
@@ -173,7 +187,7 @@ commutative   G(M, N)          = G(N, M)
 associative   G(G(M,N), K)     = G(M, G(N,K))
 ```
 
-*(all test-backed, 100% over 3000 random trials)*
+*(proved by argument in §6; also test-backed, 100% over 3000 random trials)*
 
 *Definition.* `G(M, N) = C(M ∪ N)` (union deduplicates by fact id). This is
 exactly a **Last-Write-Wins map**: see §6.
@@ -278,12 +292,62 @@ strategy**, not as a confluent rewrite rule. Dilmun fixes that strategy: the
 retrieval pipeline (§4.8) always evaluates `C ∘ F` in one order, so the
 *result* is deterministic even though the *rule set* is not confluent.
 
-*Design lever (open):* one could restore full confluence by redefining `F` to
-commute with `C` — e.g., forgetting ranked so it never discards a
-canonicalization winner without discarding its dominators too. That changes
-forgetting semantics and is left as future work. The current design chooses a
-fixed strategy over a confluent rule set, and discloses the trade-off rather
-than hiding it.
+### 5.1 Why the obstruction is structural (not about confidence)
+
+It is tempting to "fix" `F` so the whole system becomes confluent. The
+obstruction is deeper than the confidence policy:
+
+> **Claim.** For any selection operator `C` (keep one representative per class)
+> and any filter `F` that can remove `C`'s chosen representative, `C` and `F`
+> do not commute.
+>
+> *Argument.* Take a class with a top-ranked fact `w` that fails the filter and
+> a lower-ranked fact `u` that passes. `C∘F` filters first (`w` gone), so `C`
+> selects `u`. `F∘C` selects first (`w` chosen), then filters `w` away, leaving
+> the class empty. `u ≠ ∅`. ∎
+
+So no redefinition of `F` *alone* buys commutativity: as long as `C` discards
+non-winners before `F` can promote them, the two disagree. We confirmed this
+empirically — a confidence-aware `F_ranked` moved full confluence only from
+**40% to 49%**, nowhere near 100% (`benchmarks/forget_variants.py`).
+
+### 5.2 The reducer is the composite `K = C ∘ F` (idempotent projection)
+
+The right object is not two commuting rewrites but their **composite**, applied
+in fixed order:
+
+```
+K = C ∘ F        "filter, then canonicalize"
+```
+
+> **Proposition.** `K` is idempotent: `K(K(M)) = K(M)`.
+>
+> *Argument.* `F(M)` contains only policy-passing facts. `C(F(M))` selects the
+> per-class maximum among them, which is still policy-passing, so a second `F`
+> removes nothing: `F(C(F(M))) = C(F(M))`. Then `C` is idempotent, so
+> `C(F(C(F(M)))) = C(F(M))`. Hence `K∘K = K`. ∎  *(also test-backed, 100%.)*
+
+`K` is therefore a well-defined **projection onto clean-canonical states**.
+Fixing the evaluation order is not a workaround around a missing theorem — it
+*is* the semantics, the same way a language pipeline (§ the retrieval order
+`N → C → F → compose → R`) defines meaning by a fixed reduction strategy.
+
+### 5.3 Research branch: should `F` become confidence-aware? (No.)
+
+Evaluated on both axes (`benchmarks/forget_variants.py`, 3000 states):
+
+| Forget variant | Full `{N,C,F}` confluence | `K=C∘F` idempotent | Matches intended semantics |
+|---|---:|---:|---:|
+| `F_global` (current) | 40% | 100% | **100%** |
+| `F_ranked` (confidence-aware, keep-a-fallback) | 49% | 100% | **1.9%** |
+
+`F_ranked` does **not** restore confluence (49% ≪ 100%, per §5.1) and it
+*destroys* semantic quality: its fallback rule retains exactly the
+low-confidence stale facts the floor is meant to discard, so it matches the
+intended "trust, then take the latest" behavior only 1.9% of the time.
+**Verdict:** keep `F_global` as the default. The confidence-aware variant
+trades away memory behavior for an algebraic property it does not even achieve.
+This is recorded as a closed research branch, not an open lever.
 
 ---
 
@@ -295,7 +359,25 @@ The one place a classical structure emerges cleanly is merge. Per key
 state is a map from `(e, p)` to such registers, i.e. an **LWW-Map**, a
 standard state-based CRDT (CvRDT), and `G = C(· ∪ ·)` is its pointwise
 **join**. The semilattice laws in §4.4 are exactly the CvRDT convergence
-laws, which is why they test at 100%.
+laws.
+
+**Proof of the semilattice laws (by argument).** Per key `(e, p)`, `C` is
+`max` under the total order `t > c > seq`, and set union `∪` is commutative,
+associative, and idempotent. The laws follow because `C` distributes over
+union as a max:
+
+* *Commutative.* `M ∪ N = N ∪ M`, and `C` is a function of the set, so
+  `G(M,N) = C(M∪N) = C(N∪M) = G(N,M)`. (Union dedupes by id; a shared id
+  denotes the same immutable fact, so which copy is kept is immaterial.)
+* *Associative.* For any key, `max` over a union equals the max of the
+  submaxes: `max(max(A), K) = max(A ∪ K)`. Applying per key,
+  `C(C(M∪N) ∪ K) = C(M ∪ N ∪ K) = C(M ∪ C(N∪K))`, i.e.
+  `G(G(M,N),K) = G(M,G(N,K))`.
+* *Idempotent.* `G(M,M) = C(M∪M) = C(M)`, which equals `M` when `M` is
+  canonical.
+
+The randomized tests (100%) are kept as regression checks on top of the proof,
+per the "prove *and* fuzz" discipline. ∎
 
 *Honest caveat (open).* `seq` is a per-store insertion index, not globally
 unique across replicas, so the tie-break is not yet replica-consistent. For a
@@ -310,17 +392,21 @@ distributed-CRDT roadmap item is the work of closing this gap.
 
 | Property | Statement | Status |
 |---|---|---|
-| Determinism | identical states ⇒ identical outputs | test-backed (100%) |
 | Immutability | facts are never mutated, only appended | by construction |
-| Idempotence | `N`, `C`, `F` each satisfy `O(O(M)) = O(M)` | test-backed (100%) |
-| Termination | every reduction sequence halts | proved by argument |
-| Core confluence | `{N, C}` reach a unique normal form | test-backed (100%) |
-| Full confluence | `{N, C, F}` reach a unique normal form | **fails** (39.7%) — see §5 |
-| Merge convergence | `G` obeys the semilattice / CvRDT laws | test-backed (100%) |
+| Termination | every reduction sequence halts | proved by argument (§5) |
+| Merge convergence | `G` obeys the semilattice / CvRDT laws | **proved by argument (§6)** + test-backed (100%) |
+| Reducer idempotence | `K = C∘F` satisfies `K(K(M)) = K(M)` | **proved by argument (§5.2)** + test-backed (100%) |
+| Selection/filter non-commutation | `C` and `F` cannot commute | proved by argument (§5.1) |
 | Referential stability | each canonical predicate = one identifier in Σ | by construction |
+| Determinism | identical states ⇒ identical outputs | test-backed (100%) |
+| Idempotence | `N`, `C`, `F` each satisfy `O(O(M)) = O(M)` | test-backed (100%) |
+| Core confluence | `{N, C}` reach a unique normal form | test-backed (100%) |
+| Full confluence | `{N, C, F}` reach a unique normal form | **fails (~40%)** by design — see §5 |
 
-"Test-backed" means checked empirically over randomized inputs, **not**
-machine-checked. Turning the test-backed rows into proofs is the "formal
+Rows are ordered by strength of guarantee: **proved by argument** (a written
+proof above), then **test-backed** (checked empirically over randomized
+inputs, *not* machine-checked), then the one deliberate **non-property**.
+Promoting the test-backed rows to machine-checked proofs is the "formal
 verification" roadmap item.
 
 ---
