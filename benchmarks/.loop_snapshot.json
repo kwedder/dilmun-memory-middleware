@@ -1,0 +1,36 @@
+{
+  "robotics": {
+    "baseline": 0.1287,
+    "final": 0.9345,
+    "stack": [
+      "IN",
+      "AE",
+      "TW",
+      "NO",
+      "DE",
+      "SG",
+      "AF",
+      "JP",
+      "RU",
+      "chk",
+      "trd"
+    ]
+  },
+  "agent": {
+    "baseline": 0.1844,
+    "final": 0.9795,
+    "stack": [
+      "IN",
+      "AE",
+      "TW",
+      "NO",
+      "DE",
+      "ZH",
+      "SG",
+      "IL",
+      "JP",
+      "RU",
+      "chk"
+    ]
+  }
+}
