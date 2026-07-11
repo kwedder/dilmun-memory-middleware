@@ -37,6 +37,10 @@ from .normalization import PredicateRegistry, default_normalize, normalize
 from .backends import Backend, JSONVault, SQLiteBackend
 from .crdt import LWWMap, Tombstone, merge_all
 
+# Clique-binding memory + veridicality guard (relational confabulation guard).
+from .binding import BindingMemory
+from .guard import VeridicalityGuard, Verdict
+
 # Legacy markdown-vault store and its compression pipeline.
 from .memory_store import MemoryStore
 from .compression import compress_notes, CompressionError
@@ -69,5 +73,8 @@ __all__ = [
     "MemoryStore",
     "compress_notes",
     "CompressionError",
+    "BindingMemory",
+    "VeridicalityGuard",
+    "Verdict",
     "DilmunMemoryMiddleware",
 ]

@@ -206,6 +206,26 @@ class DilmunMemory:
         return results
 
     # ------------------------------------------------------------------
+    # veridicality — advisory confabulation guard (read-only)
+    # ------------------------------------------------------------------
+
+    def veridicality_guard(self, *, threshold: float = 1.0) -> "VeridicalityGuard":
+        """Build a confabulation guard over the current visible state.
+
+        Advisory only: the guard is a read-side verification layer that can tell
+        a genuine stored memory from a synthesized one (a value never seen, or a
+        combination of seen values that never co-occurred). It never mutates the
+        store and never blocks a write — callers decide what to do with a
+        Verdict. Rebuilt from the current facts on each call.
+
+            guard = memory.veridicality_guard()
+            guard.verify_fact(incoming_fact)              # write-path check
+            guard.guard({"color": "blue"}, "size", "small")   # gate a proposal
+        """
+        from .guard import VeridicalityGuard
+        return VeridicalityGuard(threshold=threshold).index_facts(self.facts())
+
+    # ------------------------------------------------------------------
     # graph structure
     # ------------------------------------------------------------------
 
