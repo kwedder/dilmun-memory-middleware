@@ -41,6 +41,9 @@ from .crdt import LWWMap, Tombstone, merge_all
 from .memory_store import MemoryStore
 from .compression import compress_notes, CompressionError
 
+# Hybrid Logical Clock — causal timestamps for the distributed (swarm) path.
+from .hlc import HLC, HLCTimestamp, stamp_fact, observe_fact
+
 # Deprecated alias kept for pre-0.2 imports.
 DilmunMemoryMiddleware = DilmunMemory
 
@@ -69,5 +72,9 @@ __all__ = [
     "MemoryStore",
     "compress_notes",
     "CompressionError",
+    "HLC",
+    "HLCTimestamp",
+    "stamp_fact",
+    "observe_fact",
     "DilmunMemoryMiddleware",
 ]
