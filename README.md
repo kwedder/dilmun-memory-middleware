@@ -25,6 +25,33 @@ downstream uses of that abstraction.
 
 ---
 
+## How it compares
+
+Most AI memory today is **vector/RAG retrieval** (Pinecone, Chroma, Mem0): it
+returns the item that *looks closest* to a query — fast and great at fuzzy
+matches, but it always returns *something* and always sounds certain, even when
+the honest answer is "I never stored that." Other approaches trade off elsewhere:
+long-context re-reads everything (slow at scale), summary memories quietly lose
+detail, and knowledge graphs get structure but not self-honesty.
+
+Dilmun is closest to a **knowledge graph — with a built-in confabulation guard.**
+Its distinguishing properties:
+
+* **It knows when it's guessing.** The [veridicality guard](dilmun/guard.py) tells
+  a genuine stored memory from a synthesized one, and *abstains* instead of
+  confabulating. In an isolated benchmark, using it to *guard* a vector retriever
+  matched the retriever's recall (0.976) while abstaining on 98% of unanswerable
+  queries and cutting confident errors to 2% — with no threshold to tune.
+* **It's deterministic and inspectable.** Same facts → same state, always; no
+  black-box similarity, every result auditable.
+
+The pitch in one line: most memories are a confident friend who *always* answers,
+even when wrong — Dilmun keeps its facts straight and is honest enough to say
+*"I'm not sure."* In practice the two compose: let vector search *find* candidate
+memories, and let Dilmun *fact-check* them before the agent trusts them.
+
+---
+
 ## Core idea
 
 Memory is not a database.
