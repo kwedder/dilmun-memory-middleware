@@ -41,6 +41,9 @@ from .crdt import LWWMap, Tombstone, merge_all
 from .memory_store import MemoryStore
 from .compression import compress_notes, CompressionError
 
+# Episodic -> semantic consolidation (frequency-weighted generalization).
+from .consolidate import consolidate, SEMANTIC_EPISODE
+
 # Deprecated alias kept for pre-0.2 imports.
 DilmunMemoryMiddleware = DilmunMemory
 
@@ -69,5 +72,7 @@ __all__ = [
     "MemoryStore",
     "compress_notes",
     "CompressionError",
+    "consolidate",
+    "SEMANTIC_EPISODE",
     "DilmunMemoryMiddleware",
 ]

@@ -23,6 +23,7 @@ import time
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 from .backends import Backend, make_backend
+from .consolidate import SEMANTIC_EPISODE
 from .fact import Fact
 from .normalization import PredicateRegistry, default_normalize, normalize
 from .operators import (
@@ -159,7 +160,8 @@ class DilmunMemory:
         """Raw facts. Default view is M_0 ∪ M_active; pass an episode id
         for that partition only, or None for the global partition M_0."""
         if episode == "__visible__":
-            visible = {None, self._active_episode}
+            # M_0 (global) + the active episode + the always-on semantic store.
+            visible = {None, self._active_episode, SEMANTIC_EPISODE}
             return [f for f in self._facts if f.episode in visible]
         return [f for f in self._facts if f.episode == episode]
 
@@ -204,6 +206,40 @@ class DilmunMemory:
         if value is not None:
             results = [f for f in results if f.value == value]
         return results
+
+    def consolidate(
+        self,
+        *,
+        generalize=None,
+        min_support: int = 2,
+        apply: bool = False,
+    ) -> List[Fact]:
+        """Fold repeated episodic facts into strength-weighted semantic facts.
+
+        Advisory by default (apply=False): returns the semantic facts that
+        *would* be created, without touching the store. With apply=True, the
+        semantic facts are written to the __semantic__ partition and the episodic
+        instances they subsume (same-entity groups only) are reclaimed — the
+        net effect shrinks the store while preserving the learned regularity.
+
+        `generalize` optionally maps an entity to a class (e.g. lambda e: 'robot')
+        to consolidate across instances; cross-entity groups add semantic
+        knowledge without reclaiming the specifics.
+        """
+        from .consolidate import consolidate as _consolidate
+        semantic, reclaimable = _consolidate(
+            self.facts(), generalize=generalize, min_support=min_support,
+            start_seq=self._seq,
+        )
+        if apply and semantic:
+            reclaimed = set(reclaimable)
+            kept = [f for f in self._facts if f.id not in reclaimed]
+            kept.extend(semantic)
+            self._seq = max((f.seq for f in semantic), default=self._seq - 1) + 1
+            kept.sort(key=lambda f: f.seq)
+            self._facts = kept
+            self.backend.replace_all(kept)
+        return semantic
 
     # ------------------------------------------------------------------
     # graph structure
