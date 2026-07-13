@@ -1,0 +1,374 @@
+{
+  "meta": {
+    "name": "bench_nabu",
+    "about": "Nabu — Babylonian god of scribes and record-keeping. An agent runs missions to amass VERIFIED facts across three domains that triangulate human physical experience: the body (emergency medicine), matter (chemistry), and culture (anthropology). Every fact is checkable against an authoritative snapshot, so the benchmark never grades an LLM with an LLM.",
+    "honesty": {
+      "chem": "Values are PubChem authority (public domain). molecular_formula and molecular_weight are strictly checked; cid is recall-only (verified on --refresh).",
+      "med": "Drug class / indication / route reflect standard emergency-medicine practice and US-approved labeling (openFDA). This is the medical record, not universal or individualized medical truth.",
+      "anthro": "Values are the ethnographic record (D-PLACE / Ethnographic Atlas lineage), which carries known Murdock-era sampling and coding biases. This scores recall of that record, NOT truth about living cultures."
+    },
+    "bridges": "med:<drug>.active_moiety = <compound> (a chem entity id), and <compound>.molecular_formula = <formula>. compose() therefore derives med -> formula, a body<->matter fact no single source wrote. These derivations are the cross-domain yield metric."
+  },
+  "entities": {
+    "water": {
+      "domain": "chem",
+      "source": "pubchem",
+      "facts": {
+        "molecular_formula": {
+          "v": "H2O"
+        },
+        "molecular_weight": {
+          "v": 18.015,
+          "tol": 0.05
+        },
+        "cid": {
+          "v": "962",
+          "strict": false
+        }
+      }
+    },
+    "oxygen": {
+      "domain": "chem",
+      "source": "pubchem",
+      "facts": {
+        "molecular_formula": {
+          "v": "O2"
+        },
+        "molecular_weight": {
+          "v": 31.998,
+          "tol": 0.05
+        },
+        "cid": {
+          "v": "977",
+          "strict": false
+        },
+        "acts_on": {
+          "v": "hemoglobin"
+        }
+      }
+    },
+    "glucose": {
+      "domain": "chem",
+      "source": "pubchem",
+      "facts": {
+        "molecular_formula": {
+          "v": "C6H12O6"
+        },
+        "molecular_weight": {
+          "v": 180.16,
+          "tol": 0.1
+        },
+        "cid": {
+          "v": "5793",
+          "strict": false
+        }
+      }
+    },
+    "ethanol": {
+      "domain": "chem",
+      "source": "pubchem",
+      "facts": {
+        "molecular_formula": {
+          "v": "C2H6O"
+        },
+        "molecular_weight": {
+          "v": 46.07,
+          "tol": 0.05
+        },
+        "cid": {
+          "v": "702",
+          "strict": false
+        },
+        "acts_on": {
+          "v": "gaba_a_receptor"
+        }
+      }
+    },
+    "caffeine": {
+      "domain": "chem",
+      "source": "pubchem",
+      "facts": {
+        "molecular_formula": {
+          "v": "C8H10N4O2"
+        },
+        "molecular_weight": {
+          "v": 194.19,
+          "tol": 0.1
+        },
+        "cid": {
+          "v": "2519",
+          "strict": false
+        },
+        "acts_on": {
+          "v": "adenosine_receptor"
+        }
+      }
+    },
+    "epinephrine": {
+      "domain": "chem",
+      "source": "pubchem",
+      "facts": {
+        "molecular_formula": {
+          "v": "C9H13NO3"
+        },
+        "molecular_weight": {
+          "v": 183.2,
+          "tol": 0.1
+        },
+        "cid": {
+          "v": "5816",
+          "strict": false
+        },
+        "acts_on": {
+          "v": "adrenergic_receptor"
+        }
+      }
+    },
+    "naloxone": {
+      "domain": "chem",
+      "source": "pubchem",
+      "facts": {
+        "molecular_formula": {
+          "v": "C19H21NO4"
+        },
+        "molecular_weight": {
+          "v": 327.37,
+          "tol": 0.1
+        },
+        "cid": {
+          "v": "5284596",
+          "strict": false
+        },
+        "acts_on": {
+          "v": "opioid_receptor"
+        }
+      }
+    },
+    "atropine": {
+      "domain": "chem",
+      "source": "pubchem",
+      "facts": {
+        "molecular_formula": {
+          "v": "C17H23NO3"
+        },
+        "molecular_weight": {
+          "v": 289.37,
+          "tol": 0.1
+        },
+        "cid": {
+          "v": "174174",
+          "strict": false
+        },
+        "acts_on": {
+          "v": "muscarinic_receptor"
+        }
+      }
+    },
+    "aspirin": {
+      "domain": "chem",
+      "source": "pubchem",
+      "facts": {
+        "molecular_formula": {
+          "v": "C9H8O4"
+        },
+        "molecular_weight": {
+          "v": 180.16,
+          "tol": 0.1
+        },
+        "cid": {
+          "v": "2244",
+          "strict": false
+        },
+        "acts_on": {
+          "v": "cyclooxygenase"
+        }
+      }
+    },
+    "med:epinephrine": {
+      "domain": "med",
+      "source": "who_eml/openfda",
+      "facts": {
+        "drug_class": {
+          "v": "sympathomimetic"
+        },
+        "indication": {
+          "v": "anaphylaxis"
+        },
+        "route": {
+          "v": "IM"
+        },
+        "active_moiety": {
+          "v": "epinephrine"
+        }
+      }
+    },
+    "med:naloxone": {
+      "domain": "med",
+      "source": "who_eml/openfda",
+      "facts": {
+        "drug_class": {
+          "v": "opioid_antagonist"
+        },
+        "indication": {
+          "v": "opioid_overdose"
+        },
+        "route": {
+          "v": "IV"
+        },
+        "active_moiety": {
+          "v": "naloxone"
+        }
+      }
+    },
+    "med:atropine": {
+      "domain": "med",
+      "source": "who_eml/openfda",
+      "facts": {
+        "drug_class": {
+          "v": "antimuscarinic"
+        },
+        "indication": {
+          "v": "symptomatic_bradycardia"
+        },
+        "route": {
+          "v": "IV"
+        },
+        "active_moiety": {
+          "v": "atropine"
+        }
+      }
+    },
+    "med:aspirin": {
+      "domain": "med",
+      "source": "who_eml/openfda",
+      "facts": {
+        "drug_class": {
+          "v": "antiplatelet"
+        },
+        "indication": {
+          "v": "acute_coronary_syndrome"
+        },
+        "route": {
+          "v": "PO"
+        },
+        "active_moiety": {
+          "v": "aspirin"
+        }
+      }
+    },
+    "med:glucose": {
+      "domain": "med",
+      "source": "who_eml/openfda",
+      "facts": {
+        "drug_class": {
+          "v": "carbohydrate"
+        },
+        "indication": {
+          "v": "hypoglycemia"
+        },
+        "route": {
+          "v": "IV"
+        },
+        "active_moiety": {
+          "v": "glucose"
+        }
+      }
+    },
+    "med:oxygen": {
+      "domain": "med",
+      "source": "who_eml/openfda",
+      "facts": {
+        "drug_class": {
+          "v": "medical_gas"
+        },
+        "indication": {
+          "v": "hypoxemia"
+        },
+        "route": {
+          "v": "inhaled"
+        },
+        "active_moiety": {
+          "v": "oxygen"
+        }
+      }
+    },
+    "soc:juhoansi": {
+      "domain": "anthro",
+      "source": "dplace/ethnographic_atlas",
+      "facts": {
+        "subsistence": {
+          "v": "hunting_gathering"
+        },
+        "region": {
+          "v": "kalahari_southern_africa"
+        },
+        "settlement": {
+          "v": "nomadic_bands"
+        }
+      }
+    },
+    "soc:nuer": {
+      "domain": "anthro",
+      "source": "dplace/ethnographic_atlas",
+      "facts": {
+        "subsistence": {
+          "v": "pastoralism"
+        },
+        "region": {
+          "v": "nile_east_africa"
+        },
+        "settlement": {
+          "v": "seasonal_transhumant"
+        }
+      }
+    },
+    "soc:trobriand": {
+      "domain": "anthro",
+      "source": "dplace/ethnographic_atlas",
+      "facts": {
+        "subsistence": {
+          "v": "horticulture"
+        },
+        "region": {
+          "v": "melanesia"
+        },
+        "settlement": {
+          "v": "sedentary_villages"
+        },
+        "exchange": {
+          "v": "kula_ring"
+        }
+      }
+    },
+    "soc:yanomamo": {
+      "domain": "anthro",
+      "source": "dplace/ethnographic_atlas",
+      "facts": {
+        "subsistence": {
+          "v": "horticulture_foraging"
+        },
+        "region": {
+          "v": "amazonia"
+        },
+        "settlement": {
+          "v": "shabono_villages"
+        }
+      }
+    },
+    "soc:inuit": {
+      "domain": "anthro",
+      "source": "dplace/ethnographic_atlas",
+      "facts": {
+        "subsistence": {
+          "v": "hunting_fishing"
+        },
+        "region": {
+          "v": "arctic_north_america"
+        },
+        "settlement": {
+          "v": "seasonal_camps"
+        }
+      }
+    }
+  }
+}

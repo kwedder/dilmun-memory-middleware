@@ -1,0 +1,596 @@
+{
+  "facts": [
+    {
+      "entity": "water",
+      "predicate": "molecular_formula",
+      "value": "H2O",
+      "timestamp": 1720800000,
+      "confidence": 0.95,
+      "seq": 0
+    },
+    {
+      "entity": "water",
+      "predicate": "molecular_weight",
+      "value": 18.015,
+      "timestamp": 1720800001,
+      "confidence": 0.95,
+      "seq": 1
+    },
+    {
+      "entity": "water",
+      "predicate": "cid",
+      "value": "962",
+      "timestamp": 1720800002,
+      "confidence": 0.95,
+      "seq": 2
+    },
+    {
+      "entity": "oxygen",
+      "predicate": "molecular_formula",
+      "value": "O2",
+      "timestamp": 1720800003,
+      "confidence": 0.95,
+      "seq": 3
+    },
+    {
+      "entity": "oxygen",
+      "predicate": "molecular_weight",
+      "value": 31.998,
+      "timestamp": 1720800004,
+      "confidence": 0.95,
+      "seq": 4
+    },
+    {
+      "entity": "oxygen",
+      "predicate": "cid",
+      "value": "977",
+      "timestamp": 1720800005,
+      "confidence": 0.95,
+      "seq": 5
+    },
+    {
+      "entity": "oxygen",
+      "predicate": "acts_on",
+      "value": "hemoglobin",
+      "timestamp": 1720800006,
+      "confidence": 0.95,
+      "seq": 6
+    },
+    {
+      "entity": "glucose",
+      "predicate": "molecular_formula",
+      "value": "C6H12O6",
+      "timestamp": 1720800007,
+      "confidence": 0.95,
+      "seq": 7
+    },
+    {
+      "entity": "glucose",
+      "predicate": "molecular_weight",
+      "value": 180.16,
+      "timestamp": 1720800008,
+      "confidence": 0.95,
+      "seq": 8
+    },
+    {
+      "entity": "glucose",
+      "predicate": "cid",
+      "value": "5793",
+      "timestamp": 1720800009,
+      "confidence": 0.95,
+      "seq": 9
+    },
+    {
+      "entity": "ethanol",
+      "predicate": "molecular_formula",
+      "value": "C2H6O",
+      "timestamp": 1720800010,
+      "confidence": 0.95,
+      "seq": 10
+    },
+    {
+      "entity": "ethanol",
+      "predicate": "molecular_weight",
+      "value": 46.07,
+      "timestamp": 1720800011,
+      "confidence": 0.95,
+      "seq": 11
+    },
+    {
+      "entity": "ethanol",
+      "predicate": "cid",
+      "value": "702",
+      "timestamp": 1720800012,
+      "confidence": 0.95,
+      "seq": 12
+    },
+    {
+      "entity": "ethanol",
+      "predicate": "acts_on",
+      "value": "gaba_a_receptor",
+      "timestamp": 1720800013,
+      "confidence": 0.95,
+      "seq": 13
+    },
+    {
+      "entity": "caffeine",
+      "predicate": "molecular_formula",
+      "value": "C8H10N4O2",
+      "timestamp": 1720800014,
+      "confidence": 0.95,
+      "seq": 14
+    },
+    {
+      "entity": "caffeine",
+      "predicate": "molecular_weight",
+      "value": 180.0,
+      "timestamp": 1720800015,
+      "confidence": 0.95,
+      "seq": 15
+    },
+    {
+      "entity": "caffeine",
+      "predicate": "cid",
+      "value": "2519",
+      "timestamp": 1720800016,
+      "confidence": 0.95,
+      "seq": 16
+    },
+    {
+      "entity": "caffeine",
+      "predicate": "acts_on",
+      "value": "adenosine_receptor",
+      "timestamp": 1720800017,
+      "confidence": 0.95,
+      "seq": 17
+    },
+    {
+      "entity": "epinephrine",
+      "predicate": "molecular_formula",
+      "value": "C9H13NO3",
+      "timestamp": 1720800018,
+      "confidence": 0.95,
+      "seq": 18
+    },
+    {
+      "entity": "epinephrine",
+      "predicate": "molecular_weight",
+      "value": 183.2,
+      "timestamp": 1720800019,
+      "confidence": 0.95,
+      "seq": 19
+    },
+    {
+      "entity": "epinephrine",
+      "predicate": "cid",
+      "value": "5816",
+      "timestamp": 1720800020,
+      "confidence": 0.95,
+      "seq": 20
+    },
+    {
+      "entity": "epinephrine",
+      "predicate": "acts_on",
+      "value": "adrenergic_receptor",
+      "timestamp": 1720800021,
+      "confidence": 0.95,
+      "seq": 21
+    },
+    {
+      "entity": "naloxone",
+      "predicate": "molecular_formula",
+      "value": "C19H21NO4",
+      "timestamp": 1720800022,
+      "confidence": 0.95,
+      "seq": 22
+    },
+    {
+      "entity": "naloxone",
+      "predicate": "molecular_weight",
+      "value": 327.37,
+      "timestamp": 1720800023,
+      "confidence": 0.95,
+      "seq": 23
+    },
+    {
+      "entity": "naloxone",
+      "predicate": "cid",
+      "value": "5284596",
+      "timestamp": 1720800024,
+      "confidence": 0.95,
+      "seq": 24
+    },
+    {
+      "entity": "naloxone",
+      "predicate": "acts_on",
+      "value": "opioid_receptor",
+      "timestamp": 1720800025,
+      "confidence": 0.95,
+      "seq": 25
+    },
+    {
+      "entity": "atropine",
+      "predicate": "molecular_formula",
+      "value": "C17H23NO3",
+      "timestamp": 1720800026,
+      "confidence": 0.95,
+      "seq": 26
+    },
+    {
+      "entity": "atropine",
+      "predicate": "molecular_weight",
+      "value": 289.37,
+      "timestamp": 1720800027,
+      "confidence": 0.95,
+      "seq": 27
+    },
+    {
+      "entity": "atropine",
+      "predicate": "cid",
+      "value": "174174",
+      "timestamp": 1720800028,
+      "confidence": 0.95,
+      "seq": 28
+    },
+    {
+      "entity": "atropine",
+      "predicate": "acts_on",
+      "value": "muscarinic_receptor",
+      "timestamp": 1720800029,
+      "confidence": 0.95,
+      "seq": 29
+    },
+    {
+      "entity": "aspirin",
+      "predicate": "molecular_formula",
+      "value": "C9H8O4",
+      "timestamp": 1720800030,
+      "confidence": 0.95,
+      "seq": 30
+    },
+    {
+      "entity": "aspirin",
+      "predicate": "molecular_weight",
+      "value": 180.16,
+      "timestamp": 1720800031,
+      "confidence": 0.95,
+      "seq": 31
+    },
+    {
+      "entity": "aspirin",
+      "predicate": "cid",
+      "value": "2244",
+      "timestamp": 1720800032,
+      "confidence": 0.95,
+      "seq": 32
+    },
+    {
+      "entity": "aspirin",
+      "predicate": "acts_on",
+      "value": "cyclooxygenase",
+      "timestamp": 1720800033,
+      "confidence": 0.95,
+      "seq": 33
+    },
+    {
+      "entity": "med:epinephrine",
+      "predicate": "drug_class",
+      "value": "sympathomimetic",
+      "timestamp": 1720800034,
+      "confidence": 0.95,
+      "seq": 34
+    },
+    {
+      "entity": "med:epinephrine",
+      "predicate": "indication",
+      "value": "anaphylaxis",
+      "timestamp": 1720800035,
+      "confidence": 0.95,
+      "seq": 35
+    },
+    {
+      "entity": "med:epinephrine",
+      "predicate": "route",
+      "value": "IM",
+      "timestamp": 1720800036,
+      "confidence": 0.95,
+      "seq": 36
+    },
+    {
+      "entity": "med:epinephrine",
+      "predicate": "active_moiety",
+      "value": "epinephrine",
+      "timestamp": 1720800037,
+      "confidence": 0.95,
+      "seq": 37
+    },
+    {
+      "entity": "med:naloxone",
+      "predicate": "drug_class",
+      "value": "opioid_antagonist",
+      "timestamp": 1720800038,
+      "confidence": 0.95,
+      "seq": 38
+    },
+    {
+      "entity": "med:naloxone",
+      "predicate": "indication",
+      "value": "opioid_overdose",
+      "timestamp": 1720800039,
+      "confidence": 0.95,
+      "seq": 39
+    },
+    {
+      "entity": "med:naloxone",
+      "predicate": "route",
+      "value": "IV",
+      "timestamp": 1720800040,
+      "confidence": 0.95,
+      "seq": 40
+    },
+    {
+      "entity": "med:naloxone",
+      "predicate": "active_moiety",
+      "value": "naloxone",
+      "timestamp": 1720800041,
+      "confidence": 0.95,
+      "seq": 41
+    },
+    {
+      "entity": "med:atropine",
+      "predicate": "drug_class",
+      "value": "antimuscarinic",
+      "timestamp": 1720800042,
+      "confidence": 0.95,
+      "seq": 42
+    },
+    {
+      "entity": "med:atropine",
+      "predicate": "indication",
+      "value": "symptomatic_bradycardia",
+      "timestamp": 1720800043,
+      "confidence": 0.95,
+      "seq": 43
+    },
+    {
+      "entity": "med:atropine",
+      "predicate": "route",
+      "value": "IV",
+      "timestamp": 1720800044,
+      "confidence": 0.95,
+      "seq": 44
+    },
+    {
+      "entity": "med:atropine",
+      "predicate": "active_moiety",
+      "value": "atropine",
+      "timestamp": 1720800045,
+      "confidence": 0.95,
+      "seq": 45
+    },
+    {
+      "entity": "med:aspirin",
+      "predicate": "drug_class",
+      "value": "antiplatelet",
+      "timestamp": 1720800046,
+      "confidence": 0.95,
+      "seq": 46
+    },
+    {
+      "entity": "med:aspirin",
+      "predicate": "indication",
+      "value": "acute_coronary_syndrome",
+      "timestamp": 1720800047,
+      "confidence": 0.95,
+      "seq": 47
+    },
+    {
+      "entity": "med:aspirin",
+      "predicate": "route",
+      "value": "PO",
+      "timestamp": 1720800048,
+      "confidence": 0.95,
+      "seq": 48
+    },
+    {
+      "entity": "med:aspirin",
+      "predicate": "active_moiety",
+      "value": "aspirin",
+      "timestamp": 1720800049,
+      "confidence": 0.95,
+      "seq": 49
+    },
+    {
+      "entity": "med:glucose",
+      "predicate": "drug_class",
+      "value": "carbohydrate",
+      "timestamp": 1720800050,
+      "confidence": 0.95,
+      "seq": 50
+    },
+    {
+      "entity": "med:glucose",
+      "predicate": "indication",
+      "value": "hypoglycemia",
+      "timestamp": 1720800051,
+      "confidence": 0.95,
+      "seq": 51
+    },
+    {
+      "entity": "med:glucose",
+      "predicate": "route",
+      "value": "IV",
+      "timestamp": 1720800052,
+      "confidence": 0.95,
+      "seq": 52
+    },
+    {
+      "entity": "med:glucose",
+      "predicate": "active_moiety",
+      "value": "glucose",
+      "timestamp": 1720800053,
+      "confidence": 0.95,
+      "seq": 53
+    },
+    {
+      "entity": "med:oxygen",
+      "predicate": "drug_class",
+      "value": "medical_gas",
+      "timestamp": 1720800054,
+      "confidence": 0.95,
+      "seq": 54
+    },
+    {
+      "entity": "med:oxygen",
+      "predicate": "indication",
+      "value": "hypoxemia",
+      "timestamp": 1720800055,
+      "confidence": 0.95,
+      "seq": 55
+    },
+    {
+      "entity": "med:oxygen",
+      "predicate": "route",
+      "value": "inhaled",
+      "timestamp": 1720800056,
+      "confidence": 0.95,
+      "seq": 56
+    },
+    {
+      "entity": "med:oxygen",
+      "predicate": "active_moiety",
+      "value": "oxygen",
+      "timestamp": 1720800057,
+      "confidence": 0.95,
+      "seq": 57
+    },
+    {
+      "entity": "soc:juhoansi",
+      "predicate": "subsistence",
+      "value": "hunting_gathering",
+      "timestamp": 1720800058,
+      "confidence": 0.95,
+      "seq": 58
+    },
+    {
+      "entity": "soc:juhoansi",
+      "predicate": "region",
+      "value": "kalahari_southern_africa",
+      "timestamp": 1720800059,
+      "confidence": 0.95,
+      "seq": 59
+    },
+    {
+      "entity": "soc:juhoansi",
+      "predicate": "settlement",
+      "value": "nomadic_bands",
+      "timestamp": 1720800060,
+      "confidence": 0.95,
+      "seq": 60
+    },
+    {
+      "entity": "soc:nuer",
+      "predicate": "subsistence",
+      "value": "pastoralism",
+      "timestamp": 1720800061,
+      "confidence": 0.95,
+      "seq": 61
+    },
+    {
+      "entity": "soc:nuer",
+      "predicate": "region",
+      "value": "nile_east_africa",
+      "timestamp": 1720800062,
+      "confidence": 0.95,
+      "seq": 62
+    },
+    {
+      "entity": "soc:nuer",
+      "predicate": "settlement",
+      "value": "seasonal_transhumant",
+      "timestamp": 1720800063,
+      "confidence": 0.95,
+      "seq": 63
+    },
+    {
+      "entity": "soc:trobriand",
+      "predicate": "subsistence",
+      "value": "horticulture",
+      "timestamp": 1720800064,
+      "confidence": 0.95,
+      "seq": 64
+    },
+    {
+      "entity": "soc:trobriand",
+      "predicate": "region",
+      "value": "melanesia",
+      "timestamp": 1720800065,
+      "confidence": 0.95,
+      "seq": 65
+    },
+    {
+      "entity": "soc:trobriand",
+      "predicate": "settlement",
+      "value": "sedentary_villages",
+      "timestamp": 1720800066,
+      "confidence": 0.95,
+      "seq": 66
+    },
+    {
+      "entity": "soc:trobriand",
+      "predicate": "exchange",
+      "value": "kula_ring",
+      "timestamp": 1720800067,
+      "confidence": 0.95,
+      "seq": 67
+    },
+    {
+      "entity": "epinephrine",
+      "predicate": "molecular_formula",
+      "value": "C9H13NO3",
+      "timestamp": 1720800500,
+      "confidence": 0.9,
+      "seq": 68
+    },
+    {
+      "entity": "med:naloxone",
+      "predicate": "indication",
+      "value": "opioid_overdose",
+      "timestamp": 1720800520,
+      "confidence": 0.8,
+      "seq": 69
+    },
+    {
+      "entity": "aspirin",
+      "predicate": "molecular_weight",
+      "value": 180.16,
+      "timestamp": 1720800540,
+      "confidence": 0.85,
+      "seq": 70
+    },
+    {
+      "entity": "epinephrine",
+      "predicate": "appearance",
+      "value": "clear_liquid",
+      "timestamp": 1720800560,
+      "confidence": 0.7,
+      "seq": 71
+    },
+    {
+      "entity": "session",
+      "predicate": "timer_start",
+      "value": 1720800000,
+      "timestamp": 1720799400,
+      "confidence": 1.0,
+      "seq": 72
+    },
+    {
+      "entity": "session",
+      "predicate": "timer_stop",
+      "value": 1720800312,
+      "timestamp": 1720800600,
+      "confidence": 1.0,
+      "seq": 73
+    }
+  ]
+}

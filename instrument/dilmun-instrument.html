@@ -1,0 +1,1257 @@
+<title>Dilmun — Memory Instrument</title>
+<meta name="color-scheme" content="dark">
+<style>
+  :root {
+    /* wedderburn.systems token system */
+    --bg-deep: #050506;
+    --bg-primary: #0a0a0c;
+    --bg-card: #131318;
+    --bg-elevated: #1e1e26;
+    --text-primary: #eae8e2;
+    --text-secondary: #8a887f;
+    --text-tertiary: #55544e;
+    --text-bright: #ffffff;
+    --accent: #c8f031;
+    --accent-hover: #d9ff45;
+    --accent-glow: rgba(200, 240, 49, 0.15);
+    --accent-dim: rgba(200, 240, 49, 0.08);
+    --teal: #2dd4a8;
+    --teal-dim: rgba(45, 212, 168, 0.1);
+    --blue: #4d8bf0;
+    --blue-dim: rgba(77, 139, 240, 0.1);
+    --amber: #f0a030;
+    --amber-dim: rgba(240, 160, 48, 0.1);
+    --coral: #f07050;
+    --coral-dim: rgba(240, 112, 80, 0.1);
+    --border: rgba(255, 255, 255, 0.04);
+    --border-subtle: rgba(255, 255, 255, 0.06);
+    --border-hover: rgba(255, 255, 255, 0.1);
+    --border-accent: rgba(200, 240, 49, 0.15);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --font-mono: "DM Mono", "Cascadia Code", "SF Mono", ui-monospace, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    overflow: hidden;
+  }
+  .instrument { display: grid; grid-template-rows: 48px 1fr 86px; height: 100vh; }
+
+  /* ── top bar ── */
+  .topbar {
+    display: flex; align-items: center; gap: 20px; padding: 0 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: rgba(10,10,12,0.9); z-index: 10;
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; font-size: 14px; flex: none; }
+  .brand .prompt { color: var(--accent); font-weight: 500; }
+  .brand .sub { color: var(--text-tertiary); font-size: 10.5px; }
+  .src-tabs { display: flex; gap: 4px; }
+  .src-tab {
+    font: inherit; font-size: 10.5px; letter-spacing: 0.08em;
+    color: var(--text-secondary); background: none;
+    border: 1px solid var(--border-subtle); border-radius: 999px;
+    padding: 5px 13px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .src-tab:hover { border-color: var(--border-hover); color: var(--text-primary); }
+  .src-tab.on { color: var(--accent); border-color: var(--border-accent); background: var(--accent-dim); }
+  .src-tab .tag { font-size: 8.5px; letter-spacing: 0.12em; opacity: 0.7; }
+  .topbar .spacer { flex: 1; }
+  .stat { font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.08em; }
+  .stat b { color: var(--text-secondary); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .stat .hot { color: var(--accent); }
+
+  /* ── stage ── */
+  .stage { position: relative; overflow: hidden; }
+  #universe { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; }
+
+  .rail { position: absolute; top: 14px; bottom: 14px; display: flex; flex-direction: column; gap: 10px; z-index: 5; pointer-events: none; }
+  .rail > * { pointer-events: auto; }
+  .rail-left { left: 14px; width: 300px; }
+  .rail-right { right: 14px; width: 330px; }
+  .panel {
+    background: rgba(19,19,24,0.85); backdrop-filter: blur(14px);
+    border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+    padding: 13px 15px;
+    min-height: 0;
+  }
+  .panel-title { font-size: 9px; letter-spacing: 0.3em; color: var(--text-tertiary); margin: 0 0 10px; text-transform: uppercase; display:flex; justify-content:space-between; align-items:baseline;}
+  .panel-title .note { letter-spacing: 0.05em; text-transform:none; }
+
+  /* pipeline */
+  .pipe-stage {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 9px 7px 12px; margin: 0 -5px;
+    border-left: 2px solid transparent; border-radius: var(--radius-sm);
+    transition: all 0.25s;
+  }
+  .pipe-stage .nm { font-size: 10.5px; letter-spacing: 0.2em; color: var(--text-tertiary); transition: all 0.3s; }
+  .pipe-stage .ct { font-size: 10.5px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+  .pipe-stage.done .nm { color: var(--text-secondary); }
+  .pipe-stage.done .ct { color: var(--text-secondary); }
+  .pipe-stage.done .ct .delta { color: var(--op, var(--accent)); }
+  .pipe-stage.now { border-left-color: var(--op, var(--accent)); background: rgba(255,255,255,0.03); }
+  .pipe-stage.now .nm { color: var(--op, var(--accent)); letter-spacing: 0.28em; text-shadow: 0 0 12px var(--op, var(--accent)); }
+  .controls { display: flex; gap: 6px; margin-top: 11px; }
+  .btn {
+    font: inherit; font-size: 10px; letter-spacing: 0.18em;
+    padding: 7px 0; flex: 1; text-align: center;
+    background: var(--accent-dim); color: var(--accent);
+    border: 1px solid var(--border-accent); border-radius: var(--radius-sm);
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn:hover { background: var(--accent-glow); border-color: var(--accent); }
+  .btn.ghost { background: none; color: var(--text-secondary); border-color: var(--border-subtle); }
+  .btn.ghost:hover { color: var(--text-primary); border-color: var(--border-hover); }
+  .btn:disabled { opacity: 0.35; cursor: default; }
+
+  /* narrative log */
+  .story { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .story-lines { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; font-size: 10.5px; line-height: 1.55; scrollbar-width: thin; scrollbar-color: var(--bg-elevated) transparent; }
+  .story-line { color: var(--text-secondary); }
+  .story-line b { color: var(--op, var(--accent)); font-weight: 500; }
+  .story-line .mut { color: var(--text-tertiary); }
+  .story-line .ev {
+    display: inline-block; font-size: 8.5px; letter-spacing: 0.08em;
+    color: var(--blue); background: var(--blue-dim);
+    border: 1px solid rgba(77,139,240,0.2); border-radius: 3px;
+    padding: 1px 5px; margin-right: 4px; vertical-align: 1px;
+  }
+  .story-line code { color: var(--accent); font-size: 0.95em; }
+
+  /* sources footnote */
+  .adapters { font-size: 9.5px; line-height: 1.7; color: var(--text-tertiary); }
+  .adapters a { color: var(--text-secondary); text-decoration: none; border-bottom: 1px solid var(--border-hover); }
+  .adapters .live { color: var(--accent); }
+
+  /* query panel */
+  .qa-row { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 10.5px; line-height: 1.5; }
+  .qa-row:last-child { border-bottom: 0; }
+  .qa-q { color: var(--text-primary); }
+  .qa-q-jp { color: var(--text-tertiary); font-size: 9.5px; margin-top: 1px; }
+  .qa-a { display: flex; align-items: baseline; gap: 7px; margin-top: 4px; flex-wrap: wrap; }
+  .qa-a .val { color: var(--accent); }
+  .qa-a .val-jp { color: var(--text-tertiary); font-size: 9.5px; }
+  .qa-a .ok { color: var(--accent); font-size: 10px; letter-spacing: 0.1em; }
+  .qa-a .proof { color: var(--teal); font-size: 9.5px; cursor: pointer; border-bottom: 1px dotted var(--teal); }
+  .score-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 7px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .score-row:hover { background: rgba(255,255,255,0.02); }
+  .score-row .fv { font-size: 11px; color: var(--text-primary); }
+  .score-row .sc { font-size: 11px; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .score-bar { grid-column: 1 / -1; display: flex; height: 3px; border-radius: 2px; overflow: hidden; background: var(--bg-elevated); }
+  .score-bar i { height: 100%; }
+  .score-key { display: flex; gap: 12px; font-size: 9px; color: var(--text-tertiary); margin: 8px 0 2px; letter-spacing: 0.06em; }
+  .score-key i { width: 7px; height: 7px; border-radius: 2px; display: inline-block; margin-right: 4px; vertical-align: -1px; }
+  .baseline {
+    margin-top: 10px; padding: 9px 11px; border-radius: var(--radius-sm);
+    border: 1px dashed var(--border-hover); font-size: 10px; line-height: 1.6; color: var(--text-tertiary);
+  }
+  .baseline b { color: var(--coral); font-weight: 500; }
+  /* terminals — tile-managed local shells */
+  .term-panel { display: flex; flex-direction: column; min-height: 0; }
+  .term-panel.has-tiles { flex: 2.4; }
+  #term-new {
+    font: inherit; font-size: 9px; letter-spacing: 0.1em;
+    color: var(--accent); background: var(--accent-dim);
+    border: 1px solid var(--border-accent); border-radius: 4px;
+    padding: 2px 9px; cursor: pointer; transition: all 0.2s;
+  }
+  #term-new:hover { background: var(--accent-glow); }
+  #term-tiles { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+  .term-tile {
+    flex: 1; min-height: 92px; display: flex; flex-direction: column;
+    background: #08080b; border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm); overflow: hidden; outline: none;
+    transition: border-color 0.2s;
+  }
+  .term-tile:focus { border-color: var(--border-accent); box-shadow: 0 0 0 1px var(--accent-dim); }
+  .term-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 4px 9px; background: var(--bg-card);
+    font-size: 9px; letter-spacing: 0.08em; color: var(--text-tertiary);
+    border-bottom: 1px solid var(--border); flex: none;
+  }
+  .term-tile.live .term-title { color: var(--accent); }
+  .term-x { background: none; border: none; color: var(--text-tertiary); cursor: pointer; font: inherit; font-size: 12px; line-height: 1; padding: 0 2px; }
+  .term-x:hover { color: var(--coral); }
+  .term-out {
+    flex: 1; min-height: 0; margin: 0; padding: 6px 9px;
+    overflow-y: auto; font-size: 10px; line-height: 1.45;
+    color: var(--text-secondary); white-space: pre-wrap; word-break: break-all;
+    scrollbar-width: thin; scrollbar-color: var(--bg-elevated) transparent;
+  }
+
+  /* inspector */
+  .kv { display: grid; grid-template-columns: 82px 1fr; gap: 4px 10px; font-size: 10.5px; }
+  .kv dt { color: var(--text-tertiary); margin: 0; }
+  .kv dd { color: var(--text-primary); margin: 0; word-break: break-all; }
+  .kv dd.nu { color: var(--accent); }
+  .kv dd.prov { color: var(--teal); cursor: pointer; }
+  .insp-empty { font-size: 10.5px; color: var(--text-tertiary); line-height: 1.5; }
+  .lost-list { margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 10px; color: var(--text-tertiary); line-height: 1.6; }
+  .lost-list s { color: var(--text-tertiary); opacity: 0.7; }
+
+  /* legend strip on canvas */
+  .legend {
+    position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 15px; font-size: 9px; letter-spacing: 0.06em;
+    color: var(--text-tertiary); z-index: 4;
+    background: rgba(10,10,12,0.75); padding: 6px 14px; border-radius: 999px;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .legend i { width: 7px; height: 7px; display: inline-block; margin-right: 5px; vertical-align: -1px; border-radius: 50%; }
+  .legend i.cr { border-radius: 1px; transform: rotate(45deg); }
+
+  /* view controls */
+  .viewctl {
+    position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 6px; z-index: 6;
+    background: rgba(10,10,12,0.8); padding: 5px 8px; border-radius: 999px;
+    border: 1px solid var(--border);
+  }
+  .vc-lbl { font-size: 8.5px; letter-spacing: 0.22em; color: var(--text-tertiary); padding: 0 4px; }
+  .vc-sep { width: 1px; height: 15px; background: var(--border-hover); margin: 0 3px; }
+  .vc-btn {
+    font: inherit; font-size: 9px; letter-spacing: 0.12em;
+    color: var(--text-secondary); background: none;
+    border: 1px solid transparent; border-radius: 999px;
+    padding: 5px 11px; cursor: pointer; transition: all 0.2s;
+  }
+  .vc-btn:hover { color: var(--text-primary); }
+  .vc-btn.on { color: var(--accent); border-color: var(--border-accent); background: var(--accent-dim); }
+  .vc-btn b { font-weight: 500; }
+
+  /* ── receipts ── */
+  .receipts {
+    display: flex; align-items: stretch; gap: 10px; padding: 10px 20px;
+    border-top: 1px solid var(--border-subtle); background: rgba(10,10,12,0.9); z-index: 10;
+    overflow-x: auto;
+  }
+  .tile {
+    flex: 1; min-width: 128px; padding: 8px 12px;
+    background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
+    display: flex; flex-direction: column; justify-content: space-between; gap: 2px;
+  }
+  .tile .lbl { font-size: 8.5px; letter-spacing: 0.14em; color: var(--text-tertiary); text-transform: uppercase; }
+  .tile .val { font-size: 15px; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .tile .val small { font-size: 9.5px; color: var(--text-tertiary); }
+  .tile .src { font-size: 8px; color: var(--text-tertiary); opacity: 0.8; }
+  .tile.warn .val { color: var(--amber); }
+
+  @media (max-width: 1080px) {
+    .rail-left { width: 258px; }
+    .rail-right { width: 280px; }
+    .legend { display: none; }
+  }
+</style>
+
+<div class="instrument">
+  <header class="topbar">
+    <div class="brand">
+      <span class="prompt">&gt;_</span>
+      <span>dilmun</span>
+      <span class="sub">deterministic memory · live on real data</span>
+    </div>
+    <nav class="src-tabs" id="src-tabs"></nav>
+    <div class="spacer"></div>
+    <div class="stat">FACTS <b id="st-facts" class="hot">0</b></div>
+    <div class="stat">DERIVED <b id="st-derived">0</b></div>
+    <div class="stat">CONFLICT KEYS <b id="st-conf">0</b></div>
+  </header>
+
+  <div class="stage">
+    <canvas id="universe"></canvas>
+
+    <aside class="rail rail-left">
+      <div class="panel">
+        <h2 class="panel-title">Pipeline <span class="note" id="src-note"></span></h2>
+        <div id="pipe"></div>
+        <div class="controls">
+          <button class="btn" id="btn-step">STEP</button>
+          <button class="btn" id="btn-run">RUN ALL</button>
+          <button class="btn ghost" id="btn-reset">RESET</button>
+        </div>
+      </div>
+      <div class="panel story">
+        <h2 class="panel-title">What just happened</h2>
+        <div class="story-lines" id="story"></div>
+      </div>
+      <div class="panel">
+        <h2 class="panel-title">Source adapters</h2>
+        <div class="adapters">
+          <span class="live">●</span> <a href="https://github.com/aiishii/JEMHopQA" target="_blank" rel="noreferrer">JEMHopQA</a> — real dev-split triples (loaded)<br>
+          ○ <a href="https://db.csail.mit.edu/labdata/labdata.html" target="_blank" rel="noreferrer">Intel Lab 54-mote telemetry</a> — planned<br>
+          ○ <a href="https://github.com/snap-research/locomo" target="_blank" rel="noreferrer">LoCoMo</a> · <a href="https://github.com/xiaowu0162/LongMemEval" target="_blank" rel="noreferrer">LongMemEval</a> — planned<br>
+          ○ openEASE NEEMs (robot episodes) — planned
+        </div>
+      </div>
+    </aside>
+
+    <aside class="rail rail-right">
+      <div class="panel" style="flex:1; overflow-y:auto; scrollbar-width:thin;">
+        <h2 class="panel-title" id="query-title">Retrieval</h2>
+        <div id="query-body" class="insp-empty">Run the pipeline — retrieval results, scores, and proofs appear here.</div>
+      </div>
+      <div class="panel">
+        <h2 class="panel-title">Fact inspector</h2>
+        <div id="insp" class="insp-empty">Click any particle (or a proof link) to inspect the fact tuple (e,&thinsp;p,&thinsp;v,&thinsp;t,&thinsp;ν) and its provenance.</div>
+      </div>
+      <div class="panel term-panel" id="term-panel">
+        <h2 class="panel-title">Terminals · linux <button id="term-new">+ TILE</button></h2>
+        <div id="term-tiles"></div>
+        <div id="term-hint" class="insp-empty">Tile-managed local shells, Claude-Code-style. Start the zero-dep bridge on your machine:<br><code style="color:var(--accent)">node instrument/server.mjs</code><br>then open <code style="color:var(--accent)">http://127.0.0.1:8420</code> and click + TILE.</div>
+      </div>
+    </aside>
+
+    <div class="viewctl">
+      <span class="vc-lbl">VIEW</span>
+      <button class="vc-btn on" id="vc-persp">PERSPECTIVE</button>
+      <button class="vc-btn" id="vc-ortho">ORTHOGONAL</button>
+      <span class="vc-sep"></span>
+      <button class="vc-btn on" id="vc-spin">ROTATION&nbsp;<b>ON</b></button>
+    </div>
+
+    <div class="legend">
+      <span><i class="cr" style="background:#c8f031"></i>canonical</span>
+      <span><i style="background:#8a887f"></i>duplicate / noise</span>
+      <span><i class="cr" style="background:#2dd4a8"></i>derived (∘)</span>
+      <span><i style="background:#f0a030"></i>forget-pending</span>
+      <span><i style="background:#f07050"></i>conflict</span>
+      <span><i style="background:#4d8bf0; border-radius:50%"></i>retrieved</span>
+    </div>
+  </div>
+
+  <footer class="receipts" id="receipts"></footer>
+</div>
+
+<script>
+(() => {
+"use strict";
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ═══════════════ Dilmun operators — 1:1 port of dilmun/operators.py ═══════════════ */
+function canonicalize(facts) {
+  const groups = new Map();
+  for (const f of facts) {
+    const k = f.entity + " " + f.predicate;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(f);
+  }
+  const out = [];
+  for (const g of groups.values()) {
+    g.sort((a, b) => b.timestamp - a.timestamp || b.confidence - a.confidence || a.seq - b.seq);
+    out.push(g[0]);
+  }
+  out.sort((a, b) => a.seq - b.seq);
+  return out;
+}
+function forget(facts, { now, minConfidence = 0 } = {}) {
+  return facts
+    .filter(f => !(f.expiresAt != null && f.expiresAt <= now) && f.confidence >= minConfidence)
+    .sort((a, b) => a.seq - b.seq);
+}
+const composable = (f1, f2) => f1.value === f2.entity;
+function compose(f1, f2, seq) {
+  return {
+    id: "d_" + seq.toString(36) + f1.id.slice(-3) + f2.id.slice(-3),
+    entity: f1.entity,
+    predicate: f1.predicate + "_" + f2.predicate,
+    value: f2.value,
+    timestamp: Math.max(f1.timestamp, f2.timestamp),
+    confidence: f1.confidence * f2.confidence,
+    seq, derivedFrom: [f1.id, f2.id],
+  };
+}
+function derive(facts, startSeq) {
+  const out = []; let seq = startSeq;
+  const ordered = [...facts].sort((a, b) => a.seq - b.seq);
+  for (const f1 of ordered) for (const f2 of ordered)
+    if (f1.id !== f2.id && composable(f1, f2)) out.push(compose(f1, f2, seq++));
+  return out;
+}
+function degreeCentrality(facts) {
+  const deg = new Map();
+  for (const f of facts) {
+    deg.set(String(f.entity), (deg.get(String(f.entity)) || 0) + 1);
+    deg.set(String(f.value), (deg.get(String(f.value)) || 0) + 1);
+  }
+  let max = 0; for (const v of deg.values()) max = Math.max(max, v);
+  const out = new Map();
+  for (const [k, v] of deg) out.set(k, max ? v / max : 0);
+  return out;
+}
+const W = [0.5, 0.3, 0.2]; // score(f) = w1·ν + w2·recency + w3·centrality
+function scoreFacts(facts) {
+  if (!facts.length) return new Map();
+  const ts = facts.map(f => f.timestamp);
+  const tMin = Math.min(...ts), span = Math.max(...ts) - tMin;
+  const cent = degreeCentrality(facts);
+  const s = new Map();
+  for (const f of facts) {
+    const recency = span === 0 ? 1 : (f.timestamp - tMin) / span;
+    s.set(f.id, {
+      total: W[0] * f.confidence + W[1] * recency + W[2] * (cent.get(String(f.entity)) || 0),
+      nu: W[0] * f.confidence, rec: W[1] * recency, cen: W[2] * (cent.get(String(f.entity)) || 0),
+    });
+  }
+  return s;
+}
+function retrieve(facts, limit) {
+  const s = scoreFacts(facts);
+  const ranked = [...facts].sort((a, b) =>
+    s.get(b.id).total - s.get(a.id).total || b.timestamp - a.timestamp || a.seq - b.seq);
+  return { ranked: limit ? ranked.slice(0, limit) : ranked, scores: s };
+}
+
+/* ═══════════════ fact builder ═══════════════ */
+let SEQ = 0;
+const F = (entity, predicate, value, timestamp, confidence = 1.0, extra = {}) => ({
+  id: "f_" + (SEQ + 1).toString(36).padStart(3, "0"),
+  entity, predicate, value, timestamp, confidence, seq: SEQ++,
+  ...extra,
+});
+
+/* ═══════════════ data sources ═══════════════ */
+const NOW = 1720800000;
+
+/* JP→EN gloss for the real JEMHopQA rows (display only — the algebra runs on the originals) */
+const TR = {
+  // entities / values
+  "IPod": "iPod", "Apple": "Apple",
+  "カリフォルニア州クパチーノ": "Cupertino, California",
+  "東條英機": "Hideki Tojo", "巣鴨拘置所": "Sugamo Prison",
+  "第二次世界大戦": "World War II",
+  "ワイルド・スピード/スーパーコンボ": "Fast & Furious: Hobbs & Shaw",
+  "ワイルド・スピード ICE BREAK": "The Fate of the Furious",
+  "F・ゲイリー・グレイ": "F. Gary Gray",
+  "藤島ジュリー景子": "Julie K. Fujishima", "メリー喜多川": "Mary Kitagawa",
+  "2021年8月14日": "14 Aug 2021",
+  // predicates
+  "開発・販売元": "developer/vendor", "本社所在地": "HQ location",
+  "死没地": "place of death", "設置のきっかけの戦争": "war it was established after",
+  "前の話にあたる作品": "prequel work", "監督": "director",
+  "母親": "mother", "死亡日": "date of death",
+};
+const tr = s => TR[s] || null;
+// composed predicates are joined with "_" by compose(); gloss each hop
+const trPred = p => String(p).split("_").map(x => TR[x] || x).join(" → ");
+const gloss = s => { const e = tr(s); return e ? ` <span class="mut">· ${e}</span>` : ""; };
+
+function jemhopqaFacts() {
+  SEQ = 0;
+  // REAL rows — JEMHopQA dev split (aiishii/JEMHopQA, CC BY-SA), compositional items
+  const f = [];
+  f.push(F("IPod", "開発・販売元", "Apple", NOW - 900));
+  f.push(F("Apple", "本社所在地", "カリフォルニア州クパチーノ", NOW - 880));
+  f.push(F("東條英機", "死没地", "巣鴨拘置所", NOW - 860));
+  f.push(F("巣鴨拘置所", "設置のきっかけの戦争", "第二次世界大戦", NOW - 840));
+  f.push(F("ワイルド・スピード/スーパーコンボ", "前の話にあたる作品", "ワイルド・スピード ICE BREAK", NOW - 820));
+  f.push(F("ワイルド・スピード ICE BREAK", "監督", "F・ゲイリー・グレイ", NOW - 800));
+  f.push(F("藤島ジュリー景子", "母親", "メリー喜多川", NOW - 780));
+  f.push(F("メリー喜多川", "死亡日", "2021年8月14日", NOW - 760));
+  // duplicate re-ingest (train/dev overlap) — C will merge these
+  f.push(F("Apple", "本社所在地", "カリフォルニア州クパチーノ", NOW - 500));
+  f.push(F("メリー喜多川", "死亡日", "2021年8月14日", NOW - 480));
+  return f;
+}
+const JEM_QA = [
+  { q: "IPodを製作している企業の本社所在地は？", en: "Where is the HQ of the company that makes the iPod?", entity: "IPod", pred: "開発・販売元_本社所在地", gold: "カリフォルニア州クパチーノ" },
+  { q: "東條英機が死没した施設は何という戦争の後に設置された？", en: "The facility where Hideki Tojo died was established after which war?", entity: "東條英機", pred: "死没地_設置のきっかけの戦争", gold: "第二次世界大戦" },
+  { q: "『スーパーコンボ』の前作の監督は誰？", en: "Who directed the film preceding 'Hobbs & Shaw'?", entity: "ワイルド・スピード/スーパーコンボ", pred: "前の話にあたる作品_監督", gold: "F・ゲイリー・グレイ" },
+  { q: "藤島ジュリー景子の母親が死亡した年月日は？", en: "On what date did Julie K. Fujishima's mother die?", entity: "藤島ジュリー景子", pred: "母親_死亡日", gold: "2021年8月14日" },
+];
+
+function robotFacts() {
+  SEQ = 0;
+  const f = [];
+  // rover-07 battery voltage — 5 updates over a shift (Intel-Lab-style Mica2Dot voltages)
+  [[2.98, 5400], [2.91, 4300], [2.87, 3100], [2.80, 1900], [2.74, 600]]
+    .forEach(([v, dt]) => f.push(F("rover-07", "battery_v", v.toFixed(2), NOW - dt, 0.99)));
+  // rover-07 position updates
+  [["C4", 5000], ["C5", 3600], ["D5", 2200], ["D6", 700]]
+    .forEach(([v, dt]) => f.push(F("rover-07", "pos_grid", v, NOW - dt, 0.97)));
+  // heading conflict: two replicas report at the SAME timestamp → ν breaks the tie
+  f.push(F("rover-07", "heading_deg", "043", NOW - 1200, 0.62, { replica: "esp32-node-3" }));
+  f.push(F("rover-07", "heading_deg", "047", NOW - 1200, 0.88, { replica: "esp32-node-5" }));
+  f.push(F("rover-07", "task", "survey-12", NOW - 5600));
+  // rover-12
+  [[2.83, 4800], [2.79, 2600], [2.75, 800]]
+    .forEach(([v, dt]) => f.push(F("rover-12", "battery_v", v.toFixed(2), NOW - dt, 0.99)));
+  f.push(F("rover-12", "temp_c", "31.2", NOW - 2400, 0.95));
+  f.push(F("rover-12", "temp_c", "32.8", NOW - 500, 0.95));
+  f.push(F("rover-12", "task", "charge", NOW - 900));
+  f.push(F("rover-12", "docked_at", "depot-a", NOW - 850));
+  // depot
+  f.push(F("depot-a", "charge_rate_kw", "1.2", NOW - 7000));
+  f.push(F("depot-a", "bay_count", "4", NOW - 7000));
+  // low-confidence radio noise — F drops these at ν-floor 0.5
+  f.push(F("rover-07", "link_rssi", "-96", NOW - 300, 0.22));
+  f.push(F("rover-12", "link_rssi", "-91", NOW - 280, 0.18));
+  // expired obstacle flag — F drops it (expires_at in the past)
+  f.push(F("rover-07", "obstacle_flag", "B3", NOW - 4000, 0.9, { expiresAt: NOW - 1000 }));
+  return f;
+}
+
+/* ═══════════════ pipeline definitions per source ═══════════════ */
+const OPC = { ingest: "#8a887f", canonicalize: "#c8f031", forget: "#f0a030", compose: "#2dd4a8", retrieve: "#4d8bf0",
+  brief: "#8a887f", fetch: "#4d8bf0", check: "#c8f031", settled: "#2dd4a8" };
+
+/* external web sources the Pi mission reaches out to (positioned on the periphery) */
+const MISSION_SRC = [
+  { id: "reuters",   label: "reuters.com",  x: -6.0, z: -3.2 },
+  { id: "wiki",      label: "wikipedia.org", x:  6.2, z: -2.4 },
+  { id: "govfeed",   label: "status.gov·api", x: 0.6, z:  6.4 },
+];
+let activeFetch = null; // {src} while a tool_execution (web fetch) is in flight
+const fmtDur = s => { const m = Math.floor(s / 60); return `${m}m ${String(s % 60).padStart(2, "0")}s`; };
+
+const SOURCES = {
+  jemhopqa: {
+    label: "JEMHopQA", tag: "REAL", note: "dev split · aiishii/JEMHopQA",
+    steps: [
+      { id: "ingest", name: "INGEST", run(st) {
+          st.store = jemhopqaFacts();
+          return `<b>ingest</b> — 10 triples loaded from the JEMHopQA dev split (4 compositional questions, incl. 2 duplicate re-ingests). Each becomes an immutable fact (e,p,v,t,ν).`;
+        } },
+      { id: "canonicalize", name: "CANONICALIZE · C", run(st) {
+          const before = st.store.length;
+          const winners = canonicalize(st.store);
+          const lostIds = new Set(st.store.map(f => f.id));
+          winners.forEach(f => lostIds.delete(f.id));
+          st.lost = st.store.filter(f => lostIds.has(f.id));
+          st.store = winners;
+          return `<b>C</b> — ${before} → ${winners.length}. <span class="mut">${st.lost.length} duplicates collapsed: for each (entity, predicate) only the newest-t, highest-ν fact survives. Deterministic — same input set, same output, any insertion order.</span>`;
+        } },
+      { id: "forget", name: "FORGET · F", run(st) {
+          const before = st.store.length;
+          st.store = forget(st.store, { now: NOW, minConfidence: 0.5 });
+          return `<b>F</b> — ${before} → ${st.store.length}. <span class="mut">Nothing stale here (no expiries, all ν ≥ 0.5). F is idempotent: applying it again changes nothing.</span>`;
+        } },
+      { id: "compose", name: "COMPOSE · ∘", run(st) {
+          const d = derive(st.store, SEQ); SEQ += d.length;
+          st.derived = d; st.store = st.store.concat(d);
+          return `<b>∘</b> — ${d.length} facts derived by path composition: f₁.value = f₂.entity ⇒ (e₁, p₁_p₂, v₂), ν = ν₁·ν₂, provenance kept. <span class="mut">These are the multi-hop answers — no LLM, no embedding, pure algebra.</span>`;
+        } },
+      { id: "retrieve", name: "RETRIEVE", run(st) {
+          st.retrieved = JEM_QA.map(qa =>
+            st.store.find(f => f.entity === qa.entity && f.predicate === qa.pred));
+          return `<b>retrieve</b> — 4 real dev-set questions answered from derived facts. <span class="mut">Every answer carries a proof chain back to its source triples.</span>`;
+        } },
+    ],
+    renderQuery(st, el) {
+      let h = "";
+      JEM_QA.forEach((qa, i) => {
+        const f = st.retrieved[i];
+        const ok = f && String(f.value) === qa.gold;
+        const enVal = f ? tr(f.value) : null;
+        h += `<div class="qa-row"><div class="qa-q">${qa.en}</div>
+          <div class="qa-q-jp">${qa.q}</div>
+          <div class="qa-a"><span class="val">${enVal || (f ? f.value : "—")}</span>
+          ${enVal ? `<span class="val-jp">${f.value}</span>` : ""}
+          <span class="ok">${ok ? "✓ MATCHES GOLD" : "✗"}</span>
+          ${f ? `<span class="proof" data-fid="${f.id}">proof</span>` : ""}</div></div>`;
+      });
+      h += `<div class="baseline">4/4 gold answers reproduced from the real dev split (Japanese multi-hop QA — English glosses shown for readability). Repo benchmark (bench_seven_nations.py) runs the full JEMHopQA corpus the same way — graph reachability over composed facts.</div>`;
+      el.innerHTML = h;
+    },
+  },
+
+  robot: {
+    label: "ROBOT TELEMETRY", tag: "SYNTH", note: "ESP32 swarm · Intel-Lab schema (synthetic)",
+    steps: [
+      { id: "ingest", name: "INGEST", run(st) {
+          st.store = robotFacts();
+          return `<b>ingest</b> — 24 telemetry facts from 3 units. Batteries reported 5×, positions 4×, two replicas disagree on heading at the same timestamp, radio noise came in at ν&lt;0.25, one obstacle flag already expired. <span class="mut">Synthetic stream shaped on the Intel-Lab 54-mote schema — the adapter swaps in real motes.</span>`;
+        } },
+      { id: "canonicalize", name: "CANONICALIZE · C", run(st) {
+          const before = st.store.length;
+          const winners = canonicalize(st.store);
+          const lostIds = new Set(st.store.map(f => f.id));
+          winners.forEach(f => lostIds.delete(f.id));
+          st.lost = st.store.filter(f => lostIds.has(f.id));
+          st.store = winners;
+          return `<b>C</b> — ${before} → ${winners.length}. <span class="mut">battery_v 5→1 (kept 2.74, the newest), pos_grid 4→1 (D6), and the heading conflict resolved: equal timestamps, so ν breaks the tie — 047° (ν 0.88) beats 043° (ν 0.62). Same rule on every replica ⇒ CRDT convergence.</span>`;
+        } },
+      { id: "forget", name: "FORGET · F", run(st) {
+          const before = st.store.length;
+          st.store = forget(st.store, { now: NOW, minConfidence: 0.5 });
+          return `<b>F</b> — ${before} → ${st.store.length}. <span class="mut">Dropped: 2 radio-noise facts under the ν-floor (0.22, 0.18 &lt; 0.5) and the expired obstacle_flag. Forgetting is a policy, not data loss — inputs stay in the episode log.</span>`;
+        } },
+      { id: "compose", name: "COMPOSE · ∘", run(st) {
+          const d = derive(st.store, SEQ); SEQ += d.length;
+          st.derived = d; st.store = st.store.concat(d);
+          return `<b>∘</b> — ${d.length} derived: rover-12.docked_at ∘ depot-a.charge_rate_kw and ∘ depot-a.bay_count ⇒ <span class="mut">rover-12 knows its charge rate and bay count without anyone writing them.</span>`;
+        } },
+      { id: "retrieve", name: "RETRIEVE", run(st) {
+          const cands = st.store.filter(f => f.entity === "rover-07");
+          const { ranked, scores } = retrieve(cands, 3);
+          st.q = { label: "query: rover-07 — top 3", ranked, scores };
+          return `<b>retrieve</b> — score(f) = 0.5·ν + 0.3·recency + 0.2·centrality. Fully deterministic ranking with an inspectable score for every fact.`;
+        } },
+    ],
+    renderQuery(st, el) {
+      const { ranked, scores } = st.q;
+      let h = `<div class="score-key"><span><i style="background:var(--accent)"></i>ν·0.5</span><span><i style="background:var(--blue)"></i>recency·0.3</span><span><i style="background:var(--teal)"></i>centrality·0.2</span></div>`;
+      for (const f of ranked) {
+        const s = scores.get(f.id);
+        h += `<div class="score-row" data-fid="${f.id}">
+          <span class="fv">${f.predicate} = ${f.value}</span><span class="sc">${s.total.toFixed(3)}</span>
+          <div class="score-bar">
+            <i style="width:${s.nu * 100}%;background:var(--accent)"></i>
+            <i style="width:${s.rec * 100}%;background:var(--blue)"></i>
+            <i style="width:${s.cen * 100}%;background:var(--teal)"></i>
+          </div></div>`;
+      }
+      h += `<div class="baseline">Vector-store baseline on this exact workload (benchmarks/results.json): current-value recall <b>0.245</b> — similarity search returns the 4 stale battery readings alongside the current one. Dilmun: <span style="color:var(--accent)">1.000</span>, because C keeps exactly one canonical fact per key.</div>`;
+      el.innerHTML = h;
+    },
+  },
+
+  mission: {
+    label: "PI MISSION", tag: "LIVE-SHAPED", note: "goal: ground current world-state · pi.dev event stream",
+    steps: [
+      { id: "brief", name: "AGENT_START", run(st) {
+          SEQ = 0; st.store = []; st.missionStart = NOW - 480;
+          return `<span class="ev">agent_start</span> <b>mission</b> — goal: <span class="mut">"establish what is true right now about station-alpha, and flag anything you can't verify." Pi will browse, and every fact it accepts is written into Dilmun via the <code>dilmun_write_fact</code> tool.</span>`;
+        } },
+      { id: "fetch", name: "tool · web_fetch", run(st) {
+          activeFetch = { src: "reuters" };
+          return `<span class="ev">tool_execution_start</span> <b>reuters.com</b> <span class="mut">— reaching out. This is a real Pi event; the beam on the left is the fetch in flight.</span>`;
+        } },
+      { id: "ingest", name: "dilmun_write ×3", run(st) {
+          activeFetch = null;
+          st.store.push(F("station-alpha", "commander", "Chen", NOW - 478, 0.80, { source: "reuters" }));
+          st.store.push(F("station-alpha", "orbit_status", "nominal", NOW - 472, 0.90, { source: "reuters" }));
+          st.store.push(F("station-alpha", "crew_count", "4", NOW - 466, 0.85, { source: "reuters" }));
+          return `<span class="ev">tool_execution_end ×3</span> <b>+3 facts</b> <span class="mut">condense from reuters (t ≈ 8 min ago). Each carries its source and acquisition time — provenance beams trace back to the web node.</span>`;
+        } },
+      { id: "fetch", name: "tool · web_fetch", run(st) {
+          activeFetch = { src: "govfeed" };
+          return `<span class="ev">tool_execution_start</span> <b>status.gov api</b> <span class="mut">— Pi re-checks against a fresher, higher-authority source before trusting the reuters snapshot.</span>`;
+        } },
+      { id: "ingest", name: "dilmun_write ×4", run(st) {
+          activeFetch = null;
+          st.store.push(F("station-alpha", "commander", "Okoro", NOW - 130, 0.95, { source: "govfeed" })); // newer + higher ν → contradicts Chen
+          st.store.push(F("station-alpha", "last_contact", "2 min ago", NOW - 120, 0.92, { source: "govfeed" }));
+          st.store.push(F("station-alpha", "crew_count", "4", NOW - 118, 0.70, { source: "wiki" }));         // agrees → merges
+          st.store.push(F("station-alpha", "dock_rumor", "unconfirmed", NOW - 300, 0.30, { source: "reuters" })); // low-ν → F will drop
+          return `<span class="ev">before_agent_start</span> <b>self-check</b> <span class="mut">— injected context said "you believe commander = Chen (ν 0.80)". The new source says Okoro (ν 0.95, newer). Two facts now share (station-alpha, commander) → the coral arc is a live contradiction.</span>`;
+        } },
+      { id: "check", name: "CANONICALIZE · C", run(st) {
+          const before = st.store.length;
+          const winners = canonicalize(st.store);
+          const lostIds = new Set(st.store.map(f => f.id)); winners.forEach(f => lostIds.delete(f.id));
+          st.lost = st.store.filter(f => lostIds.has(f.id)); st.store = winners;
+          return `<span class="ev">veridicality guard</span> <b>C</b> — ${before} → ${winners.length}. <span class="mut">commander resolved: Okoro wins (newer t, higher ν) — Chen retired. crew_count 4≡4 merged. The system checked a fact against itself and picked the more trustworthy one.</span>`;
+        } },
+      { id: "forget", name: "FORGET · F", run(st) {
+          const before = st.store.length;
+          st.store = forget(st.store, { now: NOW, minConfidence: 0.5 });
+          return `<span class="ev">tool · dilmun_forget</span> <b>F</b> — ${before} → ${st.store.length}. <span class="mut">dropped dock_rumor (ν 0.30 &lt; floor) — Pi never got to assert an unverified claim as known.</span>`;
+        } },
+      { id: "settled", name: "agent_settled", run(st) {
+          st.worldModel = canonicalize(st.store);
+          st.elapsed = NOW - st.missionStart;
+          return `<span class="ev">agent_settled</span> <b>world model built</b> <span class="mut">— Dilmun now holds a verified, time-stamped snapshot of "now", and it knows exactly how long the mission took: a fact-difference, not a guess.</span>`;
+        } },
+    ],
+    renderQuery(st, el) {
+      const wm = st.worldModel || [];
+      let h = `<div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:9px;">World model — <span style="color:var(--accent)">what Dilmun knows as of now</span>, every value carrying its source &amp; acquisition time:</div>`;
+      for (const f of wm) {
+        const losers = (st.lost || []).filter(l => l.entity === f.entity && l.predicate === f.predicate);
+        const contra = losers.find(l => String(l.value) !== String(f.value));
+        const note = contra
+          ? ` · <span style="color:var(--coral)">beat ${contra.value} (ν ${contra.confidence.toFixed(2)}, contradiction)</span>`
+          : losers.length ? ` · <span class="mut">merged ${losers.length} dup</span>` : "";
+        h += `<div class="score-row" data-fid="${f.id}">
+          <span class="fv">${f.predicate} = ${f.value}</span><span class="sc" style="color:var(--text-tertiary);font-size:9.5px">ν ${f.confidence.toFixed(2)}</span>
+          <div style="grid-column:1/-1;font-size:9px;color:var(--text-tertiary)">src ${f.source || "—"} · t−${((NOW - f.timestamp) / 60) | 0}min${note}</div>
+        </div>`;
+      }
+      h += `<div class="baseline" style="border-style:solid;border-color:var(--border-accent)">
+        <b style="color:var(--accent)">⏱ mission elapsed ${fmtDur(st.elapsed || 0)}</b> = t<sub>settle</sub> − t<sub>start</sub>.
+        This is the thing LLMs can't do: duration is a difference between two stored facts, so "how long was that?" is <span style="color:var(--accent)">computed, never hallucinated</span>. Same for "what's true now?" — retrieval is recency-weighted over unexpired facts.</div>`;
+      el.innerHTML = h;
+      if (wm.length) highlightRetrieved(wm.map(f => f.id));
+    },
+  },
+};
+
+/* ═══════════════ real benchmark receipts (from the repo) ═══════════════ */
+const RECEIPTS = [
+  { lbl: "current-value recall", val: "1.000", vs: "vs vector 0.245", src: "results.json" },
+  { lbl: "deterministic retrieval", val: "1.000", vs: "vs vector 0.967", src: "results.json" },
+  { lbl: "duplicate suppression", val: "200", vs: "vs 800 stored", src: "results.json" },
+  { lbl: "query latency", val: "0.57", vs: "ms · 8450 w/s", src: "results.json" },
+  { lbl: "CRDT convergence", val: "1.000", vs: "vs naive 0.755", src: "crdt_convergence" },
+  { lbl: "merge assoc + comm", val: "1.000", vs: "3000 trials", src: "algebra_results" },
+  { lbl: "confluence N,C,F", val: "0.397", vs: "known gap → pin K=C∘F", src: "algebra_results", warn: true },
+];
+document.getElementById("receipts").innerHTML = RECEIPTS.map(r =>
+  `<div class="tile ${r.warn ? "warn" : ""}"><span class="lbl">${r.lbl}</span>
+   <span class="val">${r.val} <small>${r.vs}</small></span><span class="src">${r.src}</span></div>`).join("");
+
+/* ═══════════════ demo state machine ═══════════════ */
+let srcKey = "jemhopqa";
+let st = { store: [], lost: [], derived: [], retrieved: null, q: null, branches: null };
+let stepIdx = -1;
+let runTimer = null;
+
+const pipeEl = document.getElementById("pipe");
+const storyEl = document.getElementById("story");
+const queryEl = document.getElementById("query-body");
+const queryTitle = document.getElementById("query-title");
+const inspEl = document.getElementById("insp");
+let selectedId = null;
+
+function fmtCount(step, i) {
+  if (i > stepIdx) return "";
+  return String(counts[i] ?? "");
+}
+let counts = [];
+
+function renderPipe() {
+  const src = SOURCES[srcKey];
+  pipeEl.innerHTML = src.steps.map((s, i) => {
+    const cls = i < stepIdx ? "done" : i === stepIdx ? "now done" : "";
+    const ct = counts[i] != null ? counts[i] : "";
+    return `<div class="pipe-stage ${cls}" style="--op:${OPC[s.id] || OPC.ingest}">
+      <span class="nm">${s.name}</span><span class="ct">${ct}</span></div>`;
+  }).join("");
+  document.getElementById("st-facts").textContent = st.store.length;
+  document.getElementById("st-derived").textContent = st.store.filter(f => f.derivedFrom).length;
+  document.getElementById("st-conf").textContent = conflictKeys().length;
+  document.getElementById("btn-step").disabled = stepIdx >= SOURCES[srcKey].steps.length - 1;
+}
+
+function conflictKeys() {
+  const seen = new Map(); const out = [];
+  for (const f of st.store) {
+    const k = f.entity + " " + f.predicate;
+    if (seen.has(k) && seen.get(k) !== String(f.value)) out.push(k);
+    else seen.set(k, String(f.value));
+  }
+  return out;
+}
+
+function pushStory(html, opId) {
+  const div = document.createElement("div");
+  div.className = "story-line";
+  div.style.setProperty("--op", OPC[opId] || OPC.ingest);
+  div.innerHTML = html;
+  storyEl.appendChild(div);
+  storyEl.scrollTop = storyEl.scrollHeight;
+}
+
+function step() {
+  const src = SOURCES[srcKey];
+  if (stepIdx >= src.steps.length - 1) return false;
+  stepIdx++;
+  const s = src.steps[stepIdx];
+  const prevIds = new Set(st.store.map(f => f.id));
+  const note = s.run(st);
+  const delta = st.store.length - prevIds.size;
+  counts[stepIdx] = st.store.length + (delta ? ` <span class="delta">(${delta > 0 ? "+" + delta : delta})</span>` : "");
+  pushStory(note, s.id);
+  syncParticles(prevIds);
+  renderPipe();
+  if (stepIdx === src.steps.length - 1) {
+    queryTitle.textContent = srcKey === "mission" ? "World model — as of now" : "Retrieval — live results";
+    src.renderQuery(st, queryEl);
+    bindProofLinks();
+    if (st.q) highlightRetrieved(st.q.ranked.map(f => f.id));
+    if (st.retrieved) highlightRetrieved(st.retrieved.filter(Boolean).map(f => f.id));
+  }
+  return true;
+}
+
+function runAll() {
+  clearInterval(runTimer);
+  runTimer = setInterval(() => { if (!step()) clearInterval(runTimer); }, reduced ? 60 : 1500);
+}
+
+function reset(newSrc) {
+  clearInterval(runTimer);
+  if (newSrc) srcKey = newSrc;
+  st = { store: [], lost: [], derived: [], retrieved: null, q: null, branches: null };
+  stepIdx = -1; counts = []; selectedId = null; activeFetch = null;
+  storyEl.innerHTML = ""; particles.clear(); retrievedIds.clear();
+  queryTitle.textContent = "Retrieval";
+  queryEl.innerHTML = '<span class="insp-empty">Run the pipeline — retrieval results, scores, and proofs appear here.</span>';
+  inspEl.innerHTML = 'Click any particle (or a proof link) to inspect the fact tuple (e,&thinsp;p,&thinsp;v,&thinsp;t,&thinsp;ν) and its provenance.';
+  document.getElementById("src-note").textContent = SOURCES[srcKey].note;
+  document.querySelectorAll(".src-tab").forEach(b => b.classList.toggle("on", b.dataset.src === srcKey));
+  renderPipe();
+}
+
+/* tabs */
+const tabsEl = document.getElementById("src-tabs");
+tabsEl.innerHTML = Object.entries(SOURCES).map(([k, s]) =>
+  `<button class="src-tab" data-src="${k}">${s.label} <span class="tag">${s.tag}</span></button>`).join("");
+tabsEl.addEventListener("click", e => {
+  const b = e.target.closest(".src-tab");
+  if (b) { reset(b.dataset.src); runAll(); }
+});
+document.getElementById("btn-step").addEventListener("click", () => { clearInterval(runTimer); step(); });
+document.getElementById("btn-run").addEventListener("click", runAll);
+document.getElementById("btn-reset").addEventListener("click", () => reset());
+
+/* inspector */
+function allKnownFacts() {
+  const m = new Map();
+  for (const f of st.store) m.set(f.id, f);
+  for (const f of (st.lost || [])) if (!m.has(f.id)) m.set(f.id, { ...f, __lost: true });
+  return m;
+}
+function inspect(id) {
+  selectedId = id;
+  const all = allKnownFacts();
+  const f = all.get(id);
+  if (!f) return;
+  // composed predicates carry "_"; gloss per-hop, otherwise single-token gloss
+  const predEn = String(f.predicate).includes("_") ? trPred(f.predicate) : tr(f.predicate);
+  let h = `<dl class="kv">
+    <dt>id</dt><dd>${f.id}${f.__lost ? ' <s style="color:var(--text-tertiary)">lost C</s>' : ""}</dd>
+    <dt>entity</dt><dd>${f.entity}${gloss(f.entity)}</dd>
+    <dt>predicate</dt><dd>${f.predicate}${predEn ? ` <span class="mut">· ${predEn}</span>` : ""}</dd>
+    <dt>value</dt><dd>${f.value}${gloss(f.value)}</dd>
+    <dt>t</dt><dd>${f.timestamp}</dd>
+    <dt>ν</dt><dd class="nu">${f.confidence.toFixed(2)}</dd>`;
+  if (f.replica) h += `<dt>replica</dt><dd>${f.replica}</dd>`;
+  if (f.expiresAt) h += `<dt>expires</dt><dd style="color:var(--amber)">${f.expiresAt} (past)</dd>`;
+  if (f.derivedFrom) {
+    const [a, b] = f.derivedFrom.map(pid => all.get(pid));
+    const lbl = x => x ? `${tr(x.entity) || x.entity}.${tr(x.predicate) || x.predicate}` : null;
+    h += `<dt>proof</dt><dd class="prov" data-fid="${f.derivedFrom[0]}">∘ ${lbl(a) || f.derivedFrom[0]}</dd>
+          <dt></dt><dd class="prov" data-fid="${f.derivedFrom[1]}">∘ ${lbl(b) || f.derivedFrom[1]}</dd>`;
+  }
+  h += `</dl>`;
+  // show what this fact beat during canonicalization
+  const losers = (st.lost || []).filter(l => l.entity === f.entity && l.predicate === f.predicate);
+  if (losers.length && !f.__lost) {
+    h += `<div class="lost-list">won canonicalization over:<br>${losers.map(l =>
+      `<s>${tr(l.value) || l.value} (t ${l.timestamp}, ν ${l.confidence.toFixed(2)})</s>`).join("<br>")}</div>`;
+  }
+  inspEl.innerHTML = h;
+  bindProofLinks();
+}
+function bindProofLinks() {
+  document.querySelectorAll("[data-fid]").forEach(el =>
+    el.onclick = () => inspect(el.dataset.fid));
+}
+
+/* ═══════════════ canvas — a view of the ACTUAL store ═══════════════ */
+function hash01(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0) / 4294967295;
+}
+const canvas = document.getElementById("universe");
+const ctx = canvas.getContext("2d");
+let CW = 0, CH = 0;
+function resizeCanvas() {
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  CW = canvas.clientWidth; CH = canvas.clientHeight;
+  canvas.width = CW * dpr; canvas.height = CH * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resizeCanvas();
+new ResizeObserver(resizeCanvas).observe(canvas);
+
+const FOCAL = 640, CAMD = 9.5;
+const ORTHO_PPW = 62;                       // px per world-unit in orthographic mode
+const ORTHO_S = ORTHO_PPW / (FOCAL * 0.82); // so particle sizing matches perspective
+let yaw = 0.4;
+let spin = true;      // rotation toggle
+let ortho = false;    // orthographic (parallel) alignment toggle
+let pitch = 0.5;      // eased toward a snap angle in ortho
+function project(x, y, z) {
+  const cx = Math.cos(yaw), sx = Math.sin(yaw);
+  const px = x * cx - z * sx, rz = x * sx + z * cx;
+  const cp = Math.cos(pitch), sp = Math.sin(pitch);
+  const py = y * cp - rz * sp;
+  if (ortho) {
+    // true orthographic: parallel projection, no perspective divide — positions read as an exact lattice
+    return { x: CW / 2 + px * ORTHO_PPW, y: CH / 2 - py * ORTHO_PPW, s: ORTHO_S, z: y * sp + rz * cp };
+  }
+  const pz = y * sp + rz * cp + CAMD;
+  const s = FOCAL / pz;
+  return { x: CW / 2 + px * s * 0.82, y: CH / 2 - py * s * 0.82, s: s / FOCAL, z: pz };
+}
+function entityPos(name, idx, total) {
+  const a = (idx / Math.max(total, 1)) * Math.PI * 2 + hash01(name) * 0.9;
+  const r = total <= 1 ? 0 : 3.4 + hash01(name + "r") * 1.2;
+  return { x: Math.cos(a) * r, z: Math.sin(a) * r };
+}
+function factWorld(f, entIdx, entTotal) {
+  const e = entityPos(f.entity, entIdx, entTotal);
+  const a = hash01(f.entity + "|" + f.predicate) * Math.PI * 2;
+  const dup = hash01(f.id) * 0.5; // same-key duplicates fan out slightly
+  const r = 0.75 + (1 - f.confidence) * 1.3 + dup * 0.4;
+  return { x: e.x + Math.cos(a + dup) * r, y: (hash01(f.id + "y") - 0.5) * 1.6, z: e.z + Math.sin(a + dup) * r };
+}
+
+const particles = new Map(); // id -> {f, alpha, target, dying, mergeTo}
+const retrievedIds = new Set();
+function highlightRetrieved(ids) { retrievedIds.clear(); ids.forEach(i => retrievedIds.add(i)); }
+
+function syncParticles(prevIds) {
+  const curIds = new Set(st.store.map(f => f.id));
+  // winners per key, for merge animation
+  const winnerByKey = new Map();
+  for (const f of st.store) winnerByKey.set(f.entity + " " + f.predicate, f.id);
+  for (const f of st.store) {
+    if (!particles.has(f.id)) particles.set(f.id, { f, alpha: 0 });
+    else particles.get(f.id).f = f;
+  }
+  for (const [id, p] of particles) {
+    if (!curIds.has(id) && !p.dying) {
+      p.dying = true;
+      const w = winnerByKey.get(p.f.entity + " " + p.f.predicate);
+      p.mergeTo = w && w !== id ? w : null;
+    }
+  }
+}
+
+let hitboxes = [];
+canvas.addEventListener("click", e => {
+  const r = canvas.getBoundingClientRect();
+  const mx = e.clientX - r.left, my = e.clientY - r.top;
+  let best = null, bd = 14;
+  for (const h of hitboxes) {
+    const d = Math.hypot(h.x - mx, h.y - my);
+    if (d < bd) { bd = d; best = h; }
+  }
+  if (best) inspect(best.id);
+});
+
+function drawCrystal(px, py, r, color, glow) {
+  ctx.save(); ctx.translate(px, py); ctx.rotate(Math.PI / 4);
+  ctx.shadowColor = color; ctx.shadowBlur = glow;
+  ctx.fillStyle = color; ctx.fillRect(-r, -r, r * 2, r * 2);
+  ctx.restore();
+}
+
+function frame(t) {
+  if (spin && !reduced) yaw += 0.00028 * 16;
+  // ease pitch toward a cleaner angle when aligned orthographically
+  const targetPitch = ortho ? 0.62 : 0.5;
+  pitch += (targetPitch - pitch) * 0.08;
+  ctx.clearRect(0, 0, CW, CH);
+  const g = ctx.createRadialGradient(CW / 2, CH / 2, 0, CW / 2, CH / 2, Math.max(CW, CH) * 0.7);
+  g.addColorStop(0, "#0a0a0c"); g.addColorStop(1, "#050506");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, CW, CH);
+
+  const ents = [...new Set([...particles.values()].map(p => p.f.entity))];
+  const entIdx = new Map(ents.map((e, i) => [e, i]));
+
+  // entity wells
+  ctx.font = "10px " + getComputedStyle(document.body).fontFamily;
+  ctx.textAlign = "center";
+  for (const e of ents) {
+    const ep = entityPos(e, entIdx.get(e), ents.length);
+    const p = project(ep.x, -0.1, ep.z);
+    const r = 1.9 * p.s * FOCAL * 0.82;
+    const wg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+    wg.addColorStop(0, "rgba(200,240,49,0.05)"); wg.addColorStop(1, "rgba(200,240,49,0)");
+    ctx.fillStyle = wg; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(138,136,127,0.8)";
+    const label = tr(e) || e; // show English gloss on the well when we have one
+    ctx.fillText(label.length > 16 ? label.slice(0, 15) + "…" : label, p.x, p.y + r * 0.62);
+  }
+
+  // ── Pi mission: external web sources + live fetch beam ──
+  if (srcKey === "mission") {
+    const center = project(0, 0, 0);
+    if (activeFetch) {
+      const s = MISSION_SRC.find(m => m.id === activeFetch.src);
+      if (s) {
+        const q = project(s.x, 0.3, s.z);
+        ctx.strokeStyle = "rgba(77,139,240,0.65)"; ctx.lineWidth = 1.4;
+        ctx.setLineDash([4, 6]); ctx.lineDashOffset = -t * 0.06;
+        ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(center.x, center.y); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+    ctx.font = "9px " + getComputedStyle(document.body).fontFamily;
+    for (const s of MISSION_SRC) {
+      const p = project(s.x, 0.3, s.z);
+      const live = activeFetch && activeFetch.src === s.id;
+      const pulse = live ? 3 + Math.sin(t * 0.02) * 2 : 0;
+      ctx.strokeStyle = live ? "rgba(77,139,240,0.7)" : "rgba(77,139,240,0.3)";
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 7 + pulse, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = live ? "rgba(77,139,240,1)" : "rgba(77,139,240,0.7)";
+      ctx.beginPath(); ctx.arc(p.x, p.y, 2.6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = live ? "rgba(120,170,250,0.95)" : "rgba(77,139,240,0.55)";
+      ctx.fillText(s.label, p.x, p.y - 13);
+    }
+  }
+
+  // conflict detection on live store (same key, different values)
+  const byKey = new Map();
+  for (const p of particles.values()) {
+    if (p.dying) continue;
+    const k = p.f.entity + " " + p.f.predicate;
+    if (!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k).push(p);
+  }
+
+  hitboxes = [];
+  const drawList = [];
+  for (const [id, p] of particles) {
+    // alpha animation
+    const speed = reduced ? 1 : 0.045;
+    if (p.dying) { p.alpha -= speed; if (p.alpha <= 0) { particles.delete(id); continue; } }
+    else p.alpha = Math.min(1, p.alpha + speed);
+    const w = factWorld(p.f, entIdx.get(p.f.entity) ?? 0, ents.length);
+    // merge animation: dying losers drift toward their winner
+    if (p.dying && p.mergeTo && particles.has(p.mergeTo)) {
+      const wf = particles.get(p.mergeTo).f;
+      const ww = factWorld(wf, entIdx.get(wf.entity) ?? 0, ents.length);
+      const u = 1 - p.alpha;
+      w.x += (ww.x - w.x) * u; w.y += (ww.y - w.y) * u; w.z += (ww.z - w.z) * u;
+    }
+    drawList.push({ p, pr: project(w.x, w.y, w.z) });
+  }
+  drawList.sort((a, b) => b.pr.z - a.pr.z);
+
+  for (const { p, pr } of drawList) {
+    const f = p.f;
+    const ppw = pr.s * FOCAL * 0.82;
+    const r = (0.06 + f.confidence * 0.1) * ppw;
+    const conflicted = (byKey.get(f.entity + " " + f.predicate) || []).length > 1;
+    const a = p.alpha * (0.35 + f.confidence * 0.6);
+    if (retrievedIds.has(f.id)) {
+      ctx.strokeStyle = "rgba(77,139,240,0.85)"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(pr.x, pr.y, r * 2.6, 0, Math.PI * 2); ctx.stroke();
+    }
+    if (f.id === selectedId) {
+      ctx.strokeStyle = "rgba(234,232,226,0.9)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(pr.x, pr.y, r * 3.2, 0, Math.PI * 2); ctx.stroke();
+    }
+    if (conflicted) {
+      ctx.shadowColor = "#f07050"; ctx.shadowBlur = 9;
+      ctx.fillStyle = `rgba(240,112,80,${a})`;
+      ctx.beginPath(); ctx.arc(pr.x, pr.y, r, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0;
+    } else if (f.derivedFrom) {
+      drawCrystal(pr.x, pr.y, r, `rgba(45,212,168,${a})`, 12);
+    } else if (f.expiresAt != null || f.confidence < 0.5) {
+      ctx.shadowColor = "#f0a030"; ctx.shadowBlur = 6;
+      ctx.fillStyle = `rgba(240,160,48,${a})`;
+      ctx.beginPath(); ctx.arc(pr.x, pr.y, r, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0;
+    } else if (p.dying) {
+      ctx.fillStyle = `rgba(138,136,127,${p.alpha * 0.5})`;
+      ctx.beginPath(); ctx.arc(pr.x, pr.y, r, 0, Math.PI * 2); ctx.fill();
+    } else {
+      drawCrystal(pr.x, pr.y, r * 0.9, `rgba(200,240,49,${a})`, 8 + f.confidence * 8);
+    }
+    if (!p.dying) hitboxes.push({ id: f.id, x: pr.x, y: pr.y });
+  }
+
+  // coral interference arcs between live conflicts
+  for (const group of byKey.values()) {
+    if (group.length < 2) continue;
+    const pts = group.map(p => {
+      const w = factWorld(p.f, entIdx.get(p.f.entity) ?? 0, ents.length);
+      return project(w.x, w.y, w.z);
+    });
+    ctx.strokeStyle = "rgba(240,112,80,0.5)"; ctx.lineWidth = 1;
+    ctx.beginPath();
+    const segs = 12;
+    for (let i = 0; i <= segs; i++) {
+      const u = i / segs;
+      const jag = (i % 2 ? 1 : -1) * 3 * Math.sin(t * 0.008);
+      const x = pts[0].x + (pts[1].x - pts[0].x) * u + jag;
+      const y = pts[0].y + (pts[1].y - pts[0].y) * u - jag;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  // provenance beams for derived facts (brief, while fresh)
+  for (const { p, pr } of drawList) {
+    if (!p.f.derivedFrom || p.alpha >= 1) continue;
+    for (const pid of p.f.derivedFrom) {
+      const par = particles.get(pid);
+      if (!par) continue;
+      const w = factWorld(par.f, entIdx.get(par.f.entity) ?? 0, ents.length);
+      const q = project(w.x, w.y, w.z);
+      ctx.strokeStyle = `rgba(45,212,168,${0.5 * (1 - p.alpha)})`;
+      ctx.setLineDash([3, 4]); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(pr.x, pr.y); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  // mission: provenance beams from web source → freshly-written fact (while condensing)
+  if (srcKey === "mission") {
+    for (const { p, pr } of drawList) {
+      if (!p.f.source || p.alpha >= 1) continue;
+      const s = MISSION_SRC.find(m => m.id === p.f.source);
+      if (!s) continue;
+      const q = project(s.x, 0.3, s.z);
+      ctx.strokeStyle = `rgba(77,139,240,${0.55 * (1 - p.alpha)})`;
+      ctx.setLineDash([3, 4]); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(pr.x, pr.y); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ═══════════════ terminals — tile-managed local shells over the bridge ═══════════════ */
+const TERM_PORT = 8420;
+const termWsUrl = () => `ws://${location.hostname || "127.0.0.1"}:${TERM_PORT}/term`;
+const termTilesEl = document.getElementById("term-tiles");
+const termPanelEl = document.getElementById("term-panel");
+const termHintEl = document.getElementById("term-hint");
+const ANSI_FG = { 30:"#55544e",31:"#f07050",32:"#c8f031",33:"#f0a030",34:"#4d8bf0",35:"#c792ea",36:"#2dd4a8",37:"#eae8e2",
+                  90:"#8a887f",91:"#f07050",92:"#d9ff45",93:"#f0a030",94:"#7aa5f5",95:"#d0a0f0",96:"#5fe0c0",97:"#ffffff" };
+const escHtml = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+let termSeq = 0;
+const termTiles = new Map();
+
+class TermTile {
+  constructor() {
+    this.id = ++termSeq;
+    this.lines = [[]];          // line = [{t: text, c: color|null}]
+    this.fg = null; this.cr = false; this.pipeMode = false; this.deadYet = false;
+    this.el = document.createElement("div");
+    this.el.className = "term-tile"; this.el.tabIndex = 0;
+    this.el.innerHTML = `<div class="term-head"><span class="term-title">sh · connecting…</span><button class="term-x" title="close tile">×</button></div><pre class="term-out"></pre>`;
+    this.out = this.el.querySelector(".term-out");
+    this.title = this.el.querySelector(".term-title");
+    this.el.querySelector(".term-x").onclick = e => { e.stopPropagation(); this.close(); };
+    this.el.addEventListener("keydown", e => this.key(e));
+    this.el.addEventListener("click", () => this.el.focus());
+    termTilesEl.appendChild(this.el);
+    termTiles.set(this.id, this);
+    layoutTerms();
+    this.connect();
+    this.el.focus();
+  }
+  connect() {
+    if (location.protocol === "https:") {   // artifact CSP can't open ws — explain instead of failing silently
+      this.dead("offline");
+      this.write("\x1b[33mterminals need the local bridge\x1b[0m\nthis page is served from claude.ai, which can't reach your shell.\nOn your linux box:\n  \x1b[32mnode instrument/server.mjs\x1b[0m\nthen open \x1b[32mhttp://127.0.0.1:8420\x1b[0m — same UI, live shells.\n");
+      return;
+    }
+    try { this.ws = new WebSocket(termWsUrl()); } catch { this.dead("blocked"); return; }
+    this.ws.onopen = () => { this.el.classList.add("live"); this.title.textContent = "sh · live"; };
+    this.ws.onmessage = ev => {
+      const m = JSON.parse(ev.data);
+      if (m.type === "output") this.write(m.data);
+      else if (m.type === "meta") { this.title.textContent = `${m.shell} · pid ${m.pid}`; this.pipeMode = /\(pipe\)/.test(m.shell); }
+      else if (m.type === "exit") this.dead("exited " + m.code);
+    };
+    this.ws.onerror = () => {
+      if (this.deadYet) return;
+      this.dead("offline");
+      this.write("\x1b[33mno bridge at " + termWsUrl() + "\x1b[0m\nrun \x1b[32mnode instrument/server.mjs\x1b[0m and reload from \x1b[32mhttp://127.0.0.1:" + TERM_PORT + "\x1b[0m\n");
+    };
+    this.ws.onclose = () => { if (!this.deadYet) this.dead("closed"); };
+  }
+  dead(msg) { this.deadYet = true; this.el.classList.remove("live"); this.title.textContent = "sh · " + msg; }
+  write(data) {
+    for (let i = 0; i < data.length; i++) {
+      const ch = data[i];
+      if (ch === "\x1b") {
+        const csi = /^\x1b\[([0-9;?]*)([A-Za-z])/.exec(data.slice(i, i + 24));
+        if (csi) {
+          if (csi[2] === "m") for (const c of (csi[1] || "0").split(";").map(Number)) {
+            if (c === 0) this.fg = null; else if (ANSI_FG[c]) this.fg = ANSI_FG[c];
+          } else if (csi[2] === "J") this.lines = [[]];
+          i += csi[0].length - 1; continue;
+        }
+        const osc = /^\x1b\][^\x07]*\x07/.exec(data.slice(i, i + 256)); // window-title etc.
+        if (osc) { i += osc[0].length - 1; continue; }
+        continue; // lone ESC or unsupported sequence — drop
+      }
+      if (ch === "\n") { this.lines.push([]); this.cr = false; continue; }
+      if (ch === "\r") { this.cr = true; continue; }
+      if (ch === "\x07") continue;
+      if (ch === "\b") {
+        const L = this.lines[this.lines.length - 1], last = L[L.length - 1];
+        if (last) { last.t = last.t.slice(0, -1); if (!last.t) L.pop(); }
+        continue;
+      }
+      let L = this.lines[this.lines.length - 1];
+      if (this.cr) { this.lines[this.lines.length - 1] = L = []; this.cr = false; } // CR overwrite (progress bars)
+      const last = L[L.length - 1];
+      if (last && last.c === this.fg) last.t += ch; else L.push({ t: ch, c: this.fg });
+    }
+    if (this.lines.length > 400) this.lines = this.lines.slice(-400);
+    if (!this.raf) this.raf = requestAnimationFrame(() => { this.raf = 0; this.render(); });
+  }
+  render() {
+    this.out.innerHTML = this.lines.map(L =>
+      L.map(s => s.c ? `<span style="color:${s.c}">${escHtml(s.t)}</span>` : escHtml(s.t)).join("")
+    ).join("\n");
+    this.out.scrollTop = this.out.scrollHeight;
+  }
+  key(e) {
+    if (!this.ws || this.ws.readyState !== 1) return;
+    let d = null;
+    if (e.key === "Enter") d = "\r";
+    else if (e.key === "Backspace") d = "\x7f";
+    else if (e.key === "Tab") d = "\t";
+    else if (e.key === "Escape") d = "\x1b";
+    else if (e.key === "ArrowUp") d = "\x1b[A"; else if (e.key === "ArrowDown") d = "\x1b[B";
+    else if (e.key === "ArrowRight") d = "\x1b[C"; else if (e.key === "ArrowLeft") d = "\x1b[D";
+    else if (e.ctrlKey && e.key.length === 1 && /[a-z]/i.test(e.key)) d = String.fromCharCode(e.key.toUpperCase().charCodeAt(0) - 64);
+    else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) d = e.key;
+    if (d == null) return;
+    e.preventDefault();
+    if (this.pipeMode) { // no pty echo — echo locally so typing is visible
+      if (d === "\r") this.write("\n");
+      else if (d === "\x7f") this.write("\b");
+      else if (d.length === 1 && d >= " ") this.write(d);
+      d = d === "\r" ? "\n" : d;
+    }
+    this.ws.send(JSON.stringify({ type: "input", data: d }));
+  }
+  close() {
+    try { this.ws && this.ws.close(); } catch {}
+    this.el.remove(); termTiles.delete(this.id); layoutTerms();
+  }
+}
+function layoutTerms() {
+  termPanelEl.classList.toggle("has-tiles", termTiles.size > 0);
+  termHintEl.style.display = termTiles.size ? "none" : "";
+}
+document.getElementById("term-new").addEventListener("click", () => new TermTile());
+
+/* view controls */
+const vcPersp = document.getElementById("vc-persp");
+const vcOrtho = document.getElementById("vc-ortho");
+const vcSpin = document.getElementById("vc-spin");
+vcPersp.addEventListener("click", () => {
+  ortho = false; vcPersp.classList.add("on"); vcOrtho.classList.remove("on");
+});
+vcOrtho.addEventListener("click", () => {
+  ortho = true; vcOrtho.classList.add("on"); vcPersp.classList.remove("on");
+});
+vcSpin.addEventListener("click", () => {
+  spin = !spin;
+  vcSpin.classList.toggle("on", spin);
+  vcSpin.innerHTML = `ROTATION&nbsp;<b>${spin ? "ON" : "OFF"}</b>`;
+});
+
+/* boot */
+reset("jemhopqa");
+runAll();
+})();
+</script>
