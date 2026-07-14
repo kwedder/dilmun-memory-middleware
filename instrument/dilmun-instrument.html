@@ -201,15 +201,19 @@
   .term-panel { display: flex; flex-direction: column; min-height: 0; }
   .term-panel.has-tiles { flex: 2.4; }
   .term-btns { display: flex; gap: 5px; }
-  #term-new, #term-console {
+  #term-new, #term-console, #term-pi {
     font: inherit; font-size: 9px; letter-spacing: 0.1em;
     color: var(--accent); background: var(--accent-dim);
     border: 1px solid var(--border-accent); border-radius: 4px;
     padding: 2px 9px; cursor: pointer; transition: all 0.2s;
   }
+  #term-pi { color: var(--bg-deep); background: var(--accent); border-color: var(--accent); }
+  #term-pi:hover { background: var(--accent-hover); }
   #term-new { color: var(--text-secondary); background: none; border-color: var(--border-subtle); }
   #term-new:hover { color: var(--text-primary); border-color: var(--border-hover); }
   #term-console:hover { background: var(--accent-glow); }
+  .term-tile.pi { border-color: var(--border-accent); }
+  .term-tile.pi.live { box-shadow: 0 0 0 1px var(--accent-dim); }
   #term-tiles { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
   /* dilmun console REPL */
   .term-tile.console { border-color: var(--border-accent); }
@@ -364,10 +368,10 @@
       </div>
       <div class="panel term-panel" id="term-panel">
         <h2 class="panel-title">Console · context window
-          <span class="term-btns"><button id="term-console">+ CONSOLE</button><button id="term-new">+ SHELL</button></span>
+          <span class="term-btns"><button id="term-pi">+ PI HARNESS</button><button id="term-console">+ CONSOLE</button><button id="term-new">+ SHELL</button></span>
         </h2>
         <div id="term-tiles"></div>
-        <div id="term-hint" class="insp-empty">The <b style="color:var(--accent)">console</b> is the channel the memory collects from — ask it to look things up and facts flow into Dilmun. <b style="color:var(--accent)">+ SHELL</b> opens a real Linux terminal (needs the bridge: <code style="color:var(--accent)">node instrument/server.mjs</code>).</div>
+        <div id="term-hint" class="insp-empty"><b style="color:var(--accent)">+ PI HARNESS</b> runs the pi.dev agent right here in the frontend — it acquires into the same memory (watch the ACQUIRE universe). <b style="color:var(--accent)">+ CONSOLE</b> is a direct memory REPL; <b style="color:var(--accent)">+ SHELL</b> is a plain Linux terminal. All need the bridge: <code style="color:var(--accent)">node instrument/server.mjs</code>.</div>
       </div>
     </aside>
 
@@ -1361,8 +1365,7 @@ function frame(t) {
 requestAnimationFrame(frame);
 
 /* ═══════════════ terminals — tile-managed local shells over the bridge ═══════════════ */
-const TERM_PORT = 8420;
-const termWsUrl = () => `ws://${location.hostname || "127.0.0.1"}:${TERM_PORT}/term`;
+const termWsUrl = run => `ws://${location.host}/term${run ? "?run=" + encodeURIComponent(run) : ""}`;
 const termTilesEl = document.getElementById("term-tiles");
 const termPanelEl = document.getElementById("term-panel");
 const termHintEl = document.getElementById("term-hint");
@@ -1373,13 +1376,15 @@ let termSeq = 0;
 const termTiles = new Map();
 
 class TermTile {
-  constructor() {
+  constructor(run = "") {
     this.id = ++termSeq;
+    this.run = run;             // "" = shell, "pi" = the pi.dev harness
     this.lines = [[]];          // line = [{t: text, c: color|null}]
     this.fg = null; this.cr = false; this.pipeMode = false; this.deadYet = false;
+    const initLabel = run === "pi" ? "pi harness · connecting…" : "sh · connecting…";
     this.el = document.createElement("div");
-    this.el.className = "term-tile"; this.el.tabIndex = 0;
-    this.el.innerHTML = `<div class="term-head"><span class="term-title">sh · connecting…</span><button class="term-x" title="close tile">×</button></div><pre class="term-out"></pre>`;
+    this.el.className = "term-tile" + (run === "pi" ? " pi" : ""); this.el.tabIndex = 0;
+    this.el.innerHTML = `<div class="term-head"><span class="term-title">${initLabel}</span><button class="term-x" title="close tile">×</button></div><pre class="term-out"></pre>`;
     this.out = this.el.querySelector(".term-out");
     this.title = this.el.querySelector(".term-title");
     this.el.querySelector(".term-x").onclick = e => { e.stopPropagation(); this.close(); };
@@ -1397,22 +1402,27 @@ class TermTile {
       this.write("\x1b[33mterminals need the local bridge\x1b[0m\nthis page is served from claude.ai, which can't reach your shell.\nOn your linux box:\n  \x1b[32mnode instrument/server.mjs\x1b[0m\nthen open \x1b[32mhttp://127.0.0.1:8420\x1b[0m — same UI, live shells.\n");
       return;
     }
-    try { this.ws = new WebSocket(termWsUrl()); } catch { this.dead("blocked"); return; }
-    this.ws.onopen = () => { this.el.classList.add("live"); this.title.textContent = "sh · live"; };
+    try { this.ws = new WebSocket(termWsUrl(this.run)); } catch { this.dead("blocked"); return; }
+    if (this.run === "pi") this.write("\x1b[90mlaunching the pi.dev harness in the repo (cwd = repo root, DILMUN_BRIDGE set)…\x1b[0m\n");
+    this.ws.onopen = () => { this.el.classList.add("live"); this.title.textContent = (this.run === "pi" ? "pi harness" : "sh") + " · live"; };
     this.ws.onmessage = ev => {
       const m = JSON.parse(ev.data);
-      if (m.type === "output") this.write(m.data);
+      if (m.type === "output") { this.sawOutput = true; this.write(m.data); }
       else if (m.type === "meta") { this.title.textContent = `${m.shell} · pid ${m.pid}`; this.pipeMode = /\(pipe\)/.test(m.shell); }
-      else if (m.type === "exit") this.dead("exited " + m.code);
+      else if (m.type === "exit") {
+        if (this.run === "pi" && !this.sawOutput)
+          this.write("\r\n\x1b[33mpi.dev harness didn't start.\x1b[0m Install it, then click + PI HARNESS again:\n  \x1b[32mnpm i -g @earendil-works/pi-coding-agent\x1b[0m   (or set DILMUN_PI to the binary path)\n");
+        this.dead("exited " + m.code);
+      }
     };
     this.ws.onerror = () => {
       if (this.deadYet) return;
       this.dead("offline");
-      this.write("\x1b[33mno bridge at " + termWsUrl() + "\x1b[0m\nrun \x1b[32mnode instrument/server.mjs\x1b[0m and reload from \x1b[32mhttp://127.0.0.1:" + TERM_PORT + "\x1b[0m\n");
+      this.write("\x1b[33mno bridge at " + termWsUrl(this.run) + "\x1b[0m\nrun \x1b[32mnode instrument/server.mjs\x1b[0m and reload from the same origin.\n");
     };
     this.ws.onclose = () => { if (!this.deadYet) this.dead("closed"); };
   }
-  dead(msg) { this.deadYet = true; this.el.classList.remove("live"); this.title.textContent = "sh · " + msg; }
+  dead(msg) { this.deadYet = true; this.el.classList.remove("live"); this.title.textContent = (this.run === "pi" ? "pi harness" : "sh") + " · " + msg; }
   write(data) {
     for (let i = 0; i < data.length; i++) {
       const ch = data[i];
@@ -1442,7 +1452,8 @@ class TermTile {
       if (last && last.c === this.fg) last.t += ch; else L.push({ t: ch, c: this.fg });
     }
     if (this.lines.length > 400) this.lines = this.lines.slice(-400);
-    if (!this.raf) this.raf = requestAnimationFrame(() => { this.raf = 0; this.render(); });
+    // setTimeout (not rAF) so terminal output still paints when the tab is hidden/backgrounded
+    if (!this.raf) this.raf = setTimeout(() => { this.raf = 0; this.render(); }, 16);
   }
   render() {
     this.out.innerHTML = this.lines.map(L =>
@@ -1546,6 +1557,7 @@ class DilmunConsole {
 }
 
 document.getElementById("term-new").addEventListener("click", () => new TermTile());
+document.getElementById("term-pi").addEventListener("click", () => new TermTile("pi"));
 document.getElementById("term-console").addEventListener("click", () => new DilmunConsole());
 
 /* view controls */

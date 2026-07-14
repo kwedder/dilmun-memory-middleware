@@ -69,11 +69,22 @@ the default port.
 
 ---
 
+## Path C — run Pi *inside* the frontend (the "pi version")
+
+Open `http://127.0.0.1:8420` and click **+ PI HARNESS** in the terminal panel. The
+bridge launches the `pi` CLI in a terminal tile, from the repo root, with
+`DILMUN_BRIDGE` already set. You talk to Pi in that tile; whatever it acquires
+lands in the shared vault and appears in the ACQUIRE universe live. Requires `pi`
+on PATH (`npm i -g @earendil-works/pi-coding-agent`, or set `DILMUN_PI` to its
+path). Combine with Path A: put the curl instructions in `.pi/AGENTS.md` so Pi
+running in the tile knows to use the bridge for facts.
+
 ## Watching it happen
 
-Open `http://127.0.0.1:8420` in a browser while Pi runs. The **ACQUIRE** universe
-polls the shared vault every few seconds, so whatever Pi collects appears as facts
-condensing in real time — you're literally watching the harness build memory.
+Open `http://127.0.0.1:8420` in a browser while Pi runs (in the + PI HARNESS tile,
+or separately). The **ACQUIRE** universe polls the shared vault every few seconds,
+so whatever Pi collects appears as facts condensing in real time — you're
+literally watching the harness build memory.
 
 ## Making it *Pi's own* web search (later)
 
