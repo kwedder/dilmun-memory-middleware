@@ -977,6 +977,54 @@ function acquire(term) {
   document.getElementById("st-derived").textContent = st.store.filter(f => f.derivedFrom).length;
 }
 
+/* ── live acquisition via the bridge — real vetted-source lookup of ANY term ──
+   The bridge's /acquire hits PubChem/openFDA/OpenAlex (vetted only). This is the
+   pi.dev seam: point /acquire at a `pi` RPC run (dilmun_write_fact restricted to
+   the same allowlist) and the console drives Pi's own web search instead. */
+let BRIDGE = false;
+(function detectBridge() {
+  const local = location.protocol === "http:" || /^(127\.|localhost|0\.0\.0\.0)/.test(location.hostname);
+  if (!local) return;
+  fetch("/health").then(r => r.ok ? r.text() : "").then(t => { BRIDGE = (t === "ok"); }).catch(() => {});
+})();
+
+async function tryLive(term) {
+  if (!BRIDGE) return null;
+  let d;
+  try { d = await (await fetch("/acquire?q=" + encodeURIComponent(term))).json(); }
+  catch { return null; }
+  const rows = (d.facts || []).filter(f => isVetted(f.source));  // enforce vetted even on live
+  if (!rows.length) return { added: 0, sources: d.sources || [] };
+  const prev = new Set(st.store.map(f => f.id));
+  let seqb = st.store.length;
+  for (const f of rows) st.store.push(F(f.entity, f.predicate, String(f.value), NOW - (seqb++ % 40), f.confidence || 0.9, { source: f.source }));
+  st.store = canonicalize(st.store);
+  const der = derive(st.store, st.store.length);
+  if (der.length) st.store = canonicalize(st.store.concat(der));
+  syncParticles(prev);
+  SOURCES.acquire.renderQuery(st, queryEl); bindProofLinks(); markDirty();
+  document.getElementById("st-facts").textContent = st.store.length;
+  document.getElementById("st-derived").textContent = st.store.filter(f => f.derivedFrom).length;
+  return { added: rows.length, sources: d.sources || [] };
+}
+
+// unified entry point: live bridge lookup first, else the built-in demo set
+async function doAcquire(term, report) {
+  term = (term || "").trim();
+  if (!term) return 0;
+  if (srcKey !== "acquire") { reset("acquire"); renderTabs(); }
+  const live = await tryLive(term);
+  if (live && live.added > 0) { report(`<span class="c-acc">+${live.added}</span> facts collected live from <span class="c-acc">${live.sources.join(", ")}</span> → memory holds <span class="c-acc">${st.store.length}</span>.`); return live.added; }
+  if (live && live.added === 0) { report(`<span class="c-coral">guard · abstain</span> — no vetted academic/government source returned facts for "${term.replace(/</g, "&lt;")}".`); return 0; }
+  // no bridge reachable → built-in demo set
+  const before = st.store.length;
+  acquire(term);
+  const added = st.store.length - before;
+  if (added > 0) report(`<span class="c-acc">+${added}</span> facts <span class="c-dim">(demo set — run <code>node instrument/server.mjs</code> for a live vetted lookup of any term)</span>.`);
+  else report(`<span class="c-coral">guard · abstain</span> — "${term.replace(/</g, "&lt;")}" isn't in the demo set. Start the bridge for a live vetted lookup.`);
+  return added;
+}
+
 /* tabs — ACQUIRE (primary) + TESTING (grouped demos) */
 const TEST_KEYS = ["jemhopqa", "robot", "mission"];
 const tabsEl = document.getElementById("src-tabs");
@@ -1008,8 +1056,9 @@ document.addEventListener("click", e => {
 document.getElementById("btn-step").addEventListener("click", () => { clearInterval(runTimer); step(); });
 document.getElementById("btn-run").addEventListener("click", runAll);
 document.getElementById("btn-reset").addEventListener("click", () => reset());
-document.getElementById("btn-ask").addEventListener("click", () => { const i = document.getElementById("ask-input"); acquire(i.value); i.value = ""; i.focus(); });
-document.getElementById("ask-input").addEventListener("keydown", e => { if (e.key === "Enter") { acquire(e.target.value); e.target.value = ""; } });
+const askReport = msg => pushStory(`<span class="ev">ask</span> ${msg}`, "settled");
+document.getElementById("btn-ask").addEventListener("click", () => { const i = document.getElementById("ask-input"); const v = i.value; i.value = ""; i.focus(); doAcquire(v, askReport); });
+document.getElementById("ask-input").addEventListener("keydown", e => { if (e.key === "Enter") { const v = e.target.value; e.target.value = ""; doAcquire(v, askReport); } });
 document.getElementById("btn-clear").addEventListener("click", () => reset());
 // vetted-source allowlist panel
 document.getElementById("vetted-list").innerHTML = VETTED.map(v =>
@@ -1496,8 +1545,8 @@ class DilmunConsole {
     this.input.addEventListener("keydown", e => { if (e.key === "Enter") { this.run(this.input.value); this.input.value = ""; } });
     termTilesEl.appendChild(this.el);
     layoutTerms();
-    this.print(`<span class="c-acc">dilmun memory console</span> — the context window. Everything asked here is collected into memory from <span class="c-acc">vetted sources only</span>.`);
-    this.print(`<span class="c-dim">try:</span> epinephrine · naloxone · trobriand · * · recall battery · stats · help`);
+    this.print(`<span class="c-acc">dilmun memory console</span> — the context window. Ask <span class="c-acc">any term</span>; it's looked up in <span class="c-acc">vetted sources only</span> (PubChem · openFDA · OpenAlex) and collected into memory.`);
+    this.print(`<span class="c-dim">try:</span> anthropology · epinephrine · caffeine · recall &lt;q&gt; · stats · help <span class="c-dim">— live lookup needs the bridge; else a small demo set</span>`);
     setTimeout(() => this.input.focus(), 0);
   }
   print(html) {
@@ -1533,14 +1582,10 @@ class DilmunConsole {
       this.print(`<span class="c-dim">top ${ranked.length} by score(f) = 0.5ν + 0.3recency + 0.2centrality:</span>`);
       for (const f of ranked) this.print(`  <span class="c-acc">${scores.get(f.id).total.toFixed(3)}</span> ${f.entity.replace(/^(med|soc):/, "")}·${f.predicate} = ${f.value} <span class="c-dim">${f.source || "∘"}</span>`);
     } else {
-      // bare term / acquire / find / look → collect from vetted sources
+      // bare term / acquire / find / look → collect from vetted sources (live via bridge, else demo)
       const term = (cmd === "acquire" || cmd === "find" || cmd === "look") ? arg : line;
-      this.ensureAcquire();
-      const before = st.store.length;
-      acquire(term);
-      const added = st.store.length - before;
-      if (added > 0) this.print(`<span class="c-acc">+${added}</span> facts collected → memory now holds <span class="c-acc">${st.store.length}</span>. <span class="c-dim">(see the ACQUIRE universe)</span>`);
-      else this.print(`<span class="c-coral">guard · abstain</span> — no vetted academic/government source carries "${term}". Not collected.`);
+      this.print(`<span class="c-dim">looking up "${term.replace(/</g, "&lt;")}" in vetted sources…</span>`);
+      doAcquire(term, msg => this.print(msg));
     }
   }
 }

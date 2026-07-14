@@ -26,6 +26,7 @@ const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 /* ── http: serve the instrument ── */
 const server = createServer((req, res) => {
   if (req.url === "/health") { res.end("ok"); return; }
+  if (req.url.startsWith("/acquire")) { handleAcquire(req, res); return; }
   try {
     const html = readFileSync(join(__dir, "dilmun-instrument.html"));
     res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -35,6 +36,68 @@ const server = createServer((req, res) => {
     res.end("dilmun-instrument.html not found next to server.mjs");
   }
 });
+
+/* ── live acquisition: ask a term, get real facts from VETTED sources only ──
+   PubChem + openFDA (gov) and OpenAlex (open science) so any reasonable term
+   returns structured, sourced facts. This is the seam the pi.dev harness plugs
+   into: swap harvest() for a `pi` RPC call whose dilmun_write_fact tool is
+   restricted to this same allowlist, and the console drives Pi instead. */
+async function jget(url, timeout = 8000) {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), timeout);
+  try {
+    const r = await fetch(url, { headers: { "User-Agent": "dilmun-instrument/0.1", "Accept": "application/json" }, signal: ac.signal });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return await r.json();
+  } finally { clearTimeout(t); }
+}
+
+async function harvest(q) {
+  const facts = [], hit = new Set();
+  const enc = encodeURIComponent(q);
+  // PubChem — compound (NIH·NLM, gov)
+  try {
+    const d = await jget(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${enc}/property/MolecularFormula,MolecularWeight/JSON`);
+    const p = d.PropertyTable.Properties[0];
+    facts.push({ entity: q, predicate: "molecular_formula", value: p.MolecularFormula, source: "pubchem", confidence: 0.98 });
+    facts.push({ entity: q, predicate: "molecular_weight", value: String(p.MolecularWeight), source: "pubchem", confidence: 0.98 });
+    facts.push({ entity: q, predicate: "pubchem_cid", value: String(p.CID), source: "pubchem", confidence: 0.98 });
+    hit.add("pubchem");
+  } catch {}
+  // openFDA — drug label (US FDA, gov)
+  try {
+    const d = await jget(`https://api.fda.gov/drug/label.json?search=openfda.generic_name:${enc}&limit=1`);
+    const r = d.results[0], of = r.openfda || {};
+    if (of.pharm_class_epc) facts.push({ entity: "med:" + q, predicate: "drug_class", value: of.pharm_class_epc[0], source: "openfda", confidence: 0.9 });
+    if (r.indications_and_usage) facts.push({ entity: "med:" + q, predicate: "indication", value: r.indications_and_usage[0].replace(/\s+/g, " ").slice(0, 90), source: "openfda", confidence: 0.85 });
+    if (of.route) facts.push({ entity: "med:" + q, predicate: "route", value: of.route[0], source: "openfda", confidence: 0.9 });
+    if (facts.some(f => f.source === "openfda")) hit.add("openfda");
+  } catch {}
+  // OpenAlex — any academic concept/topic (open science). the general fallback.
+  try {
+    const d = await jget(`https://api.openalex.org/concepts?search=${enc}&per-page=1`);
+    const c = d.results && d.results[0];
+    if (c) {
+      facts.push({ entity: q, predicate: "type", value: "academic_concept", source: "openalex", confidence: 0.9 });
+      facts.push({ entity: q, predicate: "field_level", value: String(c.level), source: "openalex", confidence: 0.85 });
+      facts.push({ entity: q, predicate: "works_count", value: String(c.works_count), source: "openalex", confidence: 0.9 });
+      if (c.description) facts.push({ entity: q, predicate: "description", value: c.description.replace(/\s+/g, " ").slice(0, 90), source: "openalex", confidence: 0.8 });
+      for (const rc of (c.related_concepts || []).slice(0, 3))
+        facts.push({ entity: q, predicate: "related", value: String(rc.display_name).toLowerCase().replace(/\s+/g, "_"), source: "openalex", confidence: 0.75 });
+      hit.add("openalex");
+    }
+  } catch {}
+  return { facts, sources: [...hit] };
+}
+
+async function handleAcquire(req, res) {
+  const q = (new URL(req.url, "http://x").searchParams.get("q") || "").trim();
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  if (!q) { res.end(JSON.stringify({ facts: [], sources: [] })); return; }
+  try { res.end(JSON.stringify(await harvest(q))); }
+  catch (e) { res.end(JSON.stringify({ facts: [], sources: [], error: String(e.message || e) })); }
+}
 
 /* ── ws upgrade: one socket = one shell ── */
 server.on("upgrade", (req, sock) => {
