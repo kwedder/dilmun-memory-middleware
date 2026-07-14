@@ -19,8 +19,8 @@
     "med:naloxone ∘ naloxone ⇒ active_moiety_molecular_weight = 327.37"
   ],
   "efficiency": {
-    "canonical_facts_per_sec": 444177.7,
-    "wall_seconds": 0.0
+    "canonical_facts_per_sec": 58086.9,
+    "wall_seconds": 0.001
   },
   "temporal_grounding": {
     "present": false,
