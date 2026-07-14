@@ -6,7 +6,8 @@
       "value": "H2O",
       "timestamp": 1720800000,
       "confidence": 0.95,
-      "seq": 0
+      "seq": 0,
+      "source": "pubchem"
     },
     {
       "entity": "water",
@@ -14,7 +15,8 @@
       "value": 18.015,
       "timestamp": 1720800001,
       "confidence": 0.95,
-      "seq": 1
+      "seq": 1,
+      "source": "pubchem"
     },
     {
       "entity": "water",
@@ -22,7 +24,8 @@
       "value": "962",
       "timestamp": 1720800002,
       "confidence": 0.95,
-      "seq": 2
+      "seq": 2,
+      "source": "pubchem"
     },
     {
       "entity": "oxygen",
@@ -30,7 +33,8 @@
       "value": "O2",
       "timestamp": 1720800003,
       "confidence": 0.95,
-      "seq": 3
+      "seq": 3,
+      "source": "pubchem"
     },
     {
       "entity": "oxygen",
@@ -38,7 +42,8 @@
       "value": 31.998,
       "timestamp": 1720800004,
       "confidence": 0.95,
-      "seq": 4
+      "seq": 4,
+      "source": "pubchem"
     },
     {
       "entity": "oxygen",
@@ -46,7 +51,8 @@
       "value": "977",
       "timestamp": 1720800005,
       "confidence": 0.95,
-      "seq": 5
+      "seq": 5,
+      "source": "pubchem"
     },
     {
       "entity": "oxygen",
@@ -54,7 +60,8 @@
       "value": "hemoglobin",
       "timestamp": 1720800006,
       "confidence": 0.95,
-      "seq": 6
+      "seq": 6,
+      "source": "pubchem"
     },
     {
       "entity": "glucose",
@@ -62,7 +69,8 @@
       "value": "C6H12O6",
       "timestamp": 1720800007,
       "confidence": 0.95,
-      "seq": 7
+      "seq": 7,
+      "source": "pubchem"
     },
     {
       "entity": "glucose",
@@ -70,7 +78,8 @@
       "value": 180.16,
       "timestamp": 1720800008,
       "confidence": 0.95,
-      "seq": 8
+      "seq": 8,
+      "source": "pubchem"
     },
     {
       "entity": "glucose",
@@ -78,7 +87,8 @@
       "value": "5793",
       "timestamp": 1720800009,
       "confidence": 0.95,
-      "seq": 9
+      "seq": 9,
+      "source": "pubchem"
     },
     {
       "entity": "ethanol",
@@ -86,7 +96,8 @@
       "value": "C2H6O",
       "timestamp": 1720800010,
       "confidence": 0.95,
-      "seq": 10
+      "seq": 10,
+      "source": "pubchem"
     },
     {
       "entity": "ethanol",
@@ -94,7 +105,8 @@
       "value": 46.07,
       "timestamp": 1720800011,
       "confidence": 0.95,
-      "seq": 11
+      "seq": 11,
+      "source": "pubchem"
     },
     {
       "entity": "ethanol",
@@ -102,7 +114,8 @@
       "value": "702",
       "timestamp": 1720800012,
       "confidence": 0.95,
-      "seq": 12
+      "seq": 12,
+      "source": "pubchem"
     },
     {
       "entity": "ethanol",
@@ -110,7 +123,8 @@
       "value": "gaba_a_receptor",
       "timestamp": 1720800013,
       "confidence": 0.95,
-      "seq": 13
+      "seq": 13,
+      "source": "pubchem"
     },
     {
       "entity": "caffeine",
@@ -118,7 +132,8 @@
       "value": "C8H10N4O2",
       "timestamp": 1720800014,
       "confidence": 0.95,
-      "seq": 14
+      "seq": 14,
+      "source": "pubchem"
     },
     {
       "entity": "caffeine",
@@ -126,7 +141,8 @@
       "value": 180.0,
       "timestamp": 1720800015,
       "confidence": 0.95,
-      "seq": 15
+      "seq": 15,
+      "source": "pubchem"
     },
     {
       "entity": "caffeine",
@@ -134,7 +150,8 @@
       "value": "2519",
       "timestamp": 1720800016,
       "confidence": 0.95,
-      "seq": 16
+      "seq": 16,
+      "source": "pubchem"
     },
     {
       "entity": "caffeine",
@@ -142,7 +159,8 @@
       "value": "adenosine_receptor",
       "timestamp": 1720800017,
       "confidence": 0.95,
-      "seq": 17
+      "seq": 17,
+      "source": "pubchem"
     },
     {
       "entity": "epinephrine",
@@ -150,7 +168,8 @@
       "value": "C9H13NO3",
       "timestamp": 1720800018,
       "confidence": 0.95,
-      "seq": 18
+      "seq": 18,
+      "source": "pubchem"
     },
     {
       "entity": "epinephrine",
@@ -158,7 +177,8 @@
       "value": 183.2,
       "timestamp": 1720800019,
       "confidence": 0.95,
-      "seq": 19
+      "seq": 19,
+      "source": "pubchem"
     },
     {
       "entity": "epinephrine",
@@ -166,7 +186,8 @@
       "value": "5816",
       "timestamp": 1720800020,
       "confidence": 0.95,
-      "seq": 20
+      "seq": 20,
+      "source": "pubchem"
     },
     {
       "entity": "epinephrine",
@@ -174,7 +195,8 @@
       "value": "adrenergic_receptor",
       "timestamp": 1720800021,
       "confidence": 0.95,
-      "seq": 21
+      "seq": 21,
+      "source": "pubchem"
     },
     {
       "entity": "naloxone",
@@ -182,7 +204,8 @@
       "value": "C19H21NO4",
       "timestamp": 1720800022,
       "confidence": 0.95,
-      "seq": 22
+      "seq": 22,
+      "source": "pubchem"
     },
     {
       "entity": "naloxone",
@@ -190,7 +213,8 @@
       "value": 327.37,
       "timestamp": 1720800023,
       "confidence": 0.95,
-      "seq": 23
+      "seq": 23,
+      "source": "pubchem"
     },
     {
       "entity": "naloxone",
@@ -198,7 +222,8 @@
       "value": "5284596",
       "timestamp": 1720800024,
       "confidence": 0.95,
-      "seq": 24
+      "seq": 24,
+      "source": "pubchem"
     },
     {
       "entity": "naloxone",
@@ -206,7 +231,8 @@
       "value": "opioid_receptor",
       "timestamp": 1720800025,
       "confidence": 0.95,
-      "seq": 25
+      "seq": 25,
+      "source": "pubchem"
     },
     {
       "entity": "atropine",
@@ -214,7 +240,8 @@
       "value": "C17H23NO3",
       "timestamp": 1720800026,
       "confidence": 0.95,
-      "seq": 26
+      "seq": 26,
+      "source": "pubchem"
     },
     {
       "entity": "atropine",
@@ -222,7 +249,8 @@
       "value": 289.37,
       "timestamp": 1720800027,
       "confidence": 0.95,
-      "seq": 27
+      "seq": 27,
+      "source": "pubchem"
     },
     {
       "entity": "atropine",
@@ -230,7 +258,8 @@
       "value": "174174",
       "timestamp": 1720800028,
       "confidence": 0.95,
-      "seq": 28
+      "seq": 28,
+      "source": "pubchem"
     },
     {
       "entity": "atropine",
@@ -238,7 +267,8 @@
       "value": "muscarinic_receptor",
       "timestamp": 1720800029,
       "confidence": 0.95,
-      "seq": 29
+      "seq": 29,
+      "source": "pubchem"
     },
     {
       "entity": "aspirin",
@@ -246,7 +276,8 @@
       "value": "C9H8O4",
       "timestamp": 1720800030,
       "confidence": 0.95,
-      "seq": 30
+      "seq": 30,
+      "source": "pubchem"
     },
     {
       "entity": "aspirin",
@@ -254,7 +285,8 @@
       "value": 180.16,
       "timestamp": 1720800031,
       "confidence": 0.95,
-      "seq": 31
+      "seq": 31,
+      "source": "pubchem"
     },
     {
       "entity": "aspirin",
@@ -262,7 +294,8 @@
       "value": "2244",
       "timestamp": 1720800032,
       "confidence": 0.95,
-      "seq": 32
+      "seq": 32,
+      "source": "pubchem"
     },
     {
       "entity": "aspirin",
@@ -270,7 +303,8 @@
       "value": "cyclooxygenase",
       "timestamp": 1720800033,
       "confidence": 0.95,
-      "seq": 33
+      "seq": 33,
+      "source": "pubchem"
     },
     {
       "entity": "med:epinephrine",
@@ -278,7 +312,8 @@
       "value": "sympathomimetic",
       "timestamp": 1720800034,
       "confidence": 0.95,
-      "seq": 34
+      "seq": 34,
+      "source": "openfda"
     },
     {
       "entity": "med:epinephrine",
@@ -286,7 +321,8 @@
       "value": "anaphylaxis",
       "timestamp": 1720800035,
       "confidence": 0.95,
-      "seq": 35
+      "seq": 35,
+      "source": "openfda"
     },
     {
       "entity": "med:epinephrine",
@@ -294,7 +330,8 @@
       "value": "IM",
       "timestamp": 1720800036,
       "confidence": 0.95,
-      "seq": 36
+      "seq": 36,
+      "source": "openfda"
     },
     {
       "entity": "med:epinephrine",
@@ -302,7 +339,8 @@
       "value": "epinephrine",
       "timestamp": 1720800037,
       "confidence": 0.95,
-      "seq": 37
+      "seq": 37,
+      "source": "openfda"
     },
     {
       "entity": "med:naloxone",
@@ -310,7 +348,8 @@
       "value": "opioid_antagonist",
       "timestamp": 1720800038,
       "confidence": 0.95,
-      "seq": 38
+      "seq": 38,
+      "source": "openfda"
     },
     {
       "entity": "med:naloxone",
@@ -318,7 +357,8 @@
       "value": "opioid_overdose",
       "timestamp": 1720800039,
       "confidence": 0.95,
-      "seq": 39
+      "seq": 39,
+      "source": "openfda"
     },
     {
       "entity": "med:naloxone",
@@ -326,7 +366,8 @@
       "value": "IV",
       "timestamp": 1720800040,
       "confidence": 0.95,
-      "seq": 40
+      "seq": 40,
+      "source": "openfda"
     },
     {
       "entity": "med:naloxone",
@@ -334,7 +375,8 @@
       "value": "naloxone",
       "timestamp": 1720800041,
       "confidence": 0.95,
-      "seq": 41
+      "seq": 41,
+      "source": "openfda"
     },
     {
       "entity": "med:atropine",
@@ -342,7 +384,8 @@
       "value": "antimuscarinic",
       "timestamp": 1720800042,
       "confidence": 0.95,
-      "seq": 42
+      "seq": 42,
+      "source": "openfda"
     },
     {
       "entity": "med:atropine",
@@ -350,7 +393,8 @@
       "value": "symptomatic_bradycardia",
       "timestamp": 1720800043,
       "confidence": 0.95,
-      "seq": 43
+      "seq": 43,
+      "source": "openfda"
     },
     {
       "entity": "med:atropine",
@@ -358,7 +402,8 @@
       "value": "IV",
       "timestamp": 1720800044,
       "confidence": 0.95,
-      "seq": 44
+      "seq": 44,
+      "source": "openfda"
     },
     {
       "entity": "med:atropine",
@@ -366,7 +411,8 @@
       "value": "atropine",
       "timestamp": 1720800045,
       "confidence": 0.95,
-      "seq": 45
+      "seq": 45,
+      "source": "openfda"
     },
     {
       "entity": "med:aspirin",
@@ -374,7 +420,8 @@
       "value": "antiplatelet",
       "timestamp": 1720800046,
       "confidence": 0.95,
-      "seq": 46
+      "seq": 46,
+      "source": "openfda"
     },
     {
       "entity": "med:aspirin",
@@ -382,7 +429,8 @@
       "value": "acute_coronary_syndrome",
       "timestamp": 1720800047,
       "confidence": 0.95,
-      "seq": 47
+      "seq": 47,
+      "source": "openfda"
     },
     {
       "entity": "med:aspirin",
@@ -390,7 +438,8 @@
       "value": "PO",
       "timestamp": 1720800048,
       "confidence": 0.95,
-      "seq": 48
+      "seq": 48,
+      "source": "openfda"
     },
     {
       "entity": "med:aspirin",
@@ -398,7 +447,8 @@
       "value": "aspirin",
       "timestamp": 1720800049,
       "confidence": 0.95,
-      "seq": 49
+      "seq": 49,
+      "source": "openfda"
     },
     {
       "entity": "med:glucose",
@@ -406,7 +456,8 @@
       "value": "carbohydrate",
       "timestamp": 1720800050,
       "confidence": 0.95,
-      "seq": 50
+      "seq": 50,
+      "source": "openfda"
     },
     {
       "entity": "med:glucose",
@@ -414,7 +465,8 @@
       "value": "hypoglycemia",
       "timestamp": 1720800051,
       "confidence": 0.95,
-      "seq": 51
+      "seq": 51,
+      "source": "openfda"
     },
     {
       "entity": "med:glucose",
@@ -422,7 +474,8 @@
       "value": "IV",
       "timestamp": 1720800052,
       "confidence": 0.95,
-      "seq": 52
+      "seq": 52,
+      "source": "openfda"
     },
     {
       "entity": "med:glucose",
@@ -430,7 +483,8 @@
       "value": "glucose",
       "timestamp": 1720800053,
       "confidence": 0.95,
-      "seq": 53
+      "seq": 53,
+      "source": "openfda"
     },
     {
       "entity": "med:oxygen",
@@ -438,7 +492,8 @@
       "value": "medical_gas",
       "timestamp": 1720800054,
       "confidence": 0.95,
-      "seq": 54
+      "seq": 54,
+      "source": "openfda"
     },
     {
       "entity": "med:oxygen",
@@ -446,7 +501,8 @@
       "value": "hypoxemia",
       "timestamp": 1720800055,
       "confidence": 0.95,
-      "seq": 55
+      "seq": 55,
+      "source": "openfda"
     },
     {
       "entity": "med:oxygen",
@@ -454,7 +510,8 @@
       "value": "inhaled",
       "timestamp": 1720800056,
       "confidence": 0.95,
-      "seq": 56
+      "seq": 56,
+      "source": "openfda"
     },
     {
       "entity": "med:oxygen",
@@ -462,7 +519,8 @@
       "value": "oxygen",
       "timestamp": 1720800057,
       "confidence": 0.95,
-      "seq": 57
+      "seq": 57,
+      "source": "openfda"
     },
     {
       "entity": "soc:juhoansi",
@@ -470,7 +528,8 @@
       "value": "hunting_gathering",
       "timestamp": 1720800058,
       "confidence": 0.95,
-      "seq": 58
+      "seq": 58,
+      "source": "dplace"
     },
     {
       "entity": "soc:juhoansi",
@@ -478,7 +537,8 @@
       "value": "kalahari_southern_africa",
       "timestamp": 1720800059,
       "confidence": 0.95,
-      "seq": 59
+      "seq": 59,
+      "source": "dplace"
     },
     {
       "entity": "soc:juhoansi",
@@ -486,7 +546,8 @@
       "value": "nomadic_bands",
       "timestamp": 1720800060,
       "confidence": 0.95,
-      "seq": 60
+      "seq": 60,
+      "source": "dplace"
     },
     {
       "entity": "soc:nuer",
@@ -494,7 +555,8 @@
       "value": "pastoralism",
       "timestamp": 1720800061,
       "confidence": 0.95,
-      "seq": 61
+      "seq": 61,
+      "source": "dplace"
     },
     {
       "entity": "soc:nuer",
@@ -502,7 +564,8 @@
       "value": "nile_east_africa",
       "timestamp": 1720800062,
       "confidence": 0.95,
-      "seq": 62
+      "seq": 62,
+      "source": "dplace"
     },
     {
       "entity": "soc:nuer",
@@ -510,7 +573,8 @@
       "value": "seasonal_transhumant",
       "timestamp": 1720800063,
       "confidence": 0.95,
-      "seq": 63
+      "seq": 63,
+      "source": "dplace"
     },
     {
       "entity": "soc:trobriand",
@@ -518,7 +582,8 @@
       "value": "horticulture",
       "timestamp": 1720800064,
       "confidence": 0.95,
-      "seq": 64
+      "seq": 64,
+      "source": "dplace"
     },
     {
       "entity": "soc:trobriand",
@@ -526,7 +591,8 @@
       "value": "melanesia",
       "timestamp": 1720800065,
       "confidence": 0.95,
-      "seq": 65
+      "seq": 65,
+      "source": "dplace"
     },
     {
       "entity": "soc:trobriand",
@@ -534,7 +600,8 @@
       "value": "sedentary_villages",
       "timestamp": 1720800066,
       "confidence": 0.95,
-      "seq": 66
+      "seq": 66,
+      "source": "dplace"
     },
     {
       "entity": "soc:trobriand",
@@ -542,7 +609,8 @@
       "value": "kula_ring",
       "timestamp": 1720800067,
       "confidence": 0.95,
-      "seq": 67
+      "seq": 67,
+      "source": "dplace"
     },
     {
       "entity": "epinephrine",
@@ -550,7 +618,8 @@
       "value": "C9H13NO3",
       "timestamp": 1720800500,
       "confidence": 0.9,
-      "seq": 68
+      "seq": 68,
+      "source": "pubchem"
     },
     {
       "entity": "med:naloxone",
@@ -558,23 +627,17 @@
       "value": "opioid_overdose",
       "timestamp": 1720800520,
       "confidence": 0.8,
-      "seq": 69
+      "seq": 69,
+      "source": "openfda"
     },
     {
       "entity": "aspirin",
-      "predicate": "molecular_weight",
-      "value": 180.16,
-      "timestamp": 1720800540,
-      "confidence": 0.85,
-      "seq": 70
-    },
-    {
-      "entity": "epinephrine",
-      "predicate": "appearance",
-      "value": "clear_liquid",
+      "predicate": "folk_use",
+      "value": "headaches",
       "timestamp": 1720800560,
-      "confidence": 0.7,
-      "seq": 71
+      "confidence": 0.5,
+      "seq": 70,
+      "source": "reddit.com"
     },
     {
       "entity": "session",
@@ -582,7 +645,8 @@
       "value": 1720800000,
       "timestamp": 1720799400,
       "confidence": 1.0,
-      "seq": 72
+      "seq": 71,
+      "source": "openfda"
     },
     {
       "entity": "session",
@@ -590,7 +654,8 @@
       "value": 1720800312,
       "timestamp": 1720800600,
       "confidence": 1.0,
-      "seq": 73
+      "seq": 72,
+      "source": "openfda"
     }
   ]
 }

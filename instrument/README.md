@@ -21,8 +21,17 @@ evenly; × kills the shell.
 
 ## What the UI shows
 
-Three sources run Dilmun's real operators (1:1 JS port of
-`dilmun-memory-middleware/dilmun/operators.py`):
+Everything runs Dilmun's real operators (1:1 JS port of `dilmun/operators.py`).
+
+**ACQUIRE** (primary tab) — memory acquisition. Ask it to look something up in
+the ask box; it draws **only from vetted academic/government sources** (PubChem,
+openFDA, PubMed, D-PLACE, OpenAlex, Scholar) and refuses — *guard · abstain* —
+when no vetted source carries the ask. Facts condense, canonicalize, and compose
+cross-domain (a drug's moiety → its compound → its formula). This is the surface
+the **Pi terminal will drive** once the harness is wired; the vetted allowlist
+matches `benchmarks/nabu/vetted_sources.json`.
+
+**TESTING** (grouped dropdown) — three demos:
 
 - **JEMHopQA (REAL)** — dev-split triples; compose derives the multi-hop
   answers, 4/4 match gold, proof chains clickable.
@@ -33,7 +42,14 @@ Three sources run Dilmun's real operators (1:1 JS port of
   shapes: web fetch → dilmun_write → self-check contradiction → forget rumor
   → temporal world model ("elapsed = t₁ − t₀, computed not hallucinated").
 
-Bottom strip: real benchmark receipts from `dilmun-memory-middleware/benchmarks/`.
+Bottom strip: real benchmark receipts from `benchmarks/`.
 
-The same HTML is published as a claude.ai artifact for sharing; terminals
-only go live when served by this bridge (artifact CSP blocks WebSockets).
+### Performance
+
+The canvas is idle-aware: it stops repainting when nothing is animating, and
+**freezes entirely while a terminal tile is focused** so the integrated shell
+stays responsive. Rotation defaults **off** (toggle in the VIEW controls) for a
+calm, low-CPU scene; ORTHOGONAL gives a static axis-aligned view.
+
+The same HTML is published as a claude.ai artifact for sharing; terminals only
+go live when served by this bridge (artifact CSP blocks WebSockets).

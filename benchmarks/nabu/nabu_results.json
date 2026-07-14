@@ -7,6 +7,8 @@
   "confabulation_rate": 0.0,
   "off_schema_rate": 0.0,
   "duplicate_suppression": 1.0,
+  "vetted_source_rate": 1.0,
+  "unvetted_sources": [],
   "cross_domain_yield": 23,
   "cross_domain_examples": [
     "med:epinephrine ∘ epinephrine ⇒ active_moiety_molecular_formula = C9H13NO3",
@@ -17,7 +19,7 @@
     "med:naloxone ∘ naloxone ⇒ active_moiety_molecular_weight = 327.37"
   ],
   "efficiency": {
-    "canonical_facts_per_sec": 465701.7,
+    "canonical_facts_per_sec": 444177.7,
     "wall_seconds": 0.0
   },
   "temporal_grounding": {

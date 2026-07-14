@@ -47,6 +47,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import time
 import urllib.parse
@@ -89,6 +90,31 @@ def value_matches(store_v, gt) -> bool:
         except (TypeError, ValueError):
             return False
     return norm(store_v) == norm(gt["v"])
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# vetted-source policy — a mission may only trust academic / government sources
+# ─────────────────────────────────────────────────────────────────────────
+_VETTED = None
+
+
+def load_vetted() -> dict:
+    global _VETTED
+    if _VETTED is None:
+        p = HERE / "vetted_sources.json"
+        _VETTED = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {"sources": {}, "domain_patterns": []}
+    return _VETTED
+
+
+def is_vetted(src: str) -> bool:
+    """A source is trusted if it's a known allowlist id or matches a gov/academic
+    domain pattern. Everything else fails vetted_source_rate (and a live guard
+    should abstain rather than write it)."""
+    v = load_vetted()
+    s = str(src or "")
+    if s in v.get("sources", {}):
+        return True
+    return any(re.search(p, s, re.I) for p in v.get("domain_patterns", []))
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -148,16 +174,20 @@ def refresh_report(seed: dict) -> dict:
 # ─────────────────────────────────────────────────────────────────────────
 # baseline harvester — deterministic, no LLM. also writes the snapshot.
 # ─────────────────────────────────────────────────────────────────────────
-def baseline_store(seed: dict, now: float) -> list[Fact]:
+def baseline_store(seed: dict, now: float):
     """Fill the manifest directly from the seed. This is the floor and the
-    ground-truth snapshot: coverage 1.0, veridicality 1.0 by construction."""
-    facts, seq = [], 0
+    ground-truth snapshot: coverage 1.0, veridicality 1.0 by construction.
+    Returns (facts, sources) where sources maps fact.id -> the vetted source."""
+    facts, sources, seq = [], {}, 0
     for ent, spec in seed["entities"].items():
+        src = spec.get("source", "")
         for pred, gt in spec["facts"].items():
-            facts.append(Fact(entity=ent, predicate=pred, value=gt["v"],
-                              timestamp=now, confidence=1.0, seq=seq))
+            f = Fact(entity=ent, predicate=pred, value=gt["v"],
+                     timestamp=now, confidence=1.0, seq=seq)
+            facts.append(f)
+            sources[f.id] = src
             seq += 1
-    return facts
+    return facts, sources
 
 
 def snapshot(seed: dict, path: Path):
@@ -168,9 +198,10 @@ def snapshot(seed: dict, path: Path):
 # scorer — runs the REAL operators over whatever store it's given
 # ─────────────────────────────────────────────────────────────────────────
 def score(seed: dict, raw_facts: list[Fact], *, tokens: int | None,
-          wall_seconds: float | None) -> dict:
+          wall_seconds: float | None, sources: dict | None = None) -> dict:
     keys = set(manifest_keys(seed))
     ent_specs = seed["entities"]
+    sources = sources or {}
 
     raw_n = len(raw_facts)
     canon = canonicalize(raw_facts)            # ← the real C operator
@@ -216,6 +247,13 @@ def score(seed: dict, raw_facts: list[Fact], *, tokens: int | None,
         if p1 and p2 and domain_of(seed, p1.entity) != domain_of(seed, p2.entity):
             cross.append((p1.entity, p2.entity, d.predicate, d.value))
 
+    # vetted-source policy — of everything pulled from a source, how much is
+    # academic/government? (derived facts carry no source; they're excluded.)
+    sourced = [f for f in canon if sources.get(f.id)]
+    vetted_ok = [f for f in sourced if is_vetted(sources[f.id])]
+    vetted_source_rate = len(vetted_ok) / len(sourced) if sourced else 1.0
+    unvetted = sorted({sources[f.id] for f in sourced if not is_vetted(sources[f.id])})
+
     # efficiency
     if tokens:
         efficiency = {"canonical_facts_per_1k_tokens": round(len(canon) / (tokens / 1000), 2),
@@ -238,6 +276,8 @@ def score(seed: dict, raw_facts: list[Fact], *, tokens: int | None,
         "confabulation_rate": round(confab_rate, 4),
         "off_schema_rate": round(off_schema_rate, 4),
         "duplicate_suppression": round(dup_suppression, 4),
+        "vetted_source_rate": round(vetted_source_rate, 4),
+        "unvetted_sources": unvetted,
         "cross_domain_yield": len(cross),
         "cross_domain_examples": [f"{a} ∘ {b} ⇒ {p} = {v}" for a, b, p, v in cross[:6]],
         "efficiency": efficiency,
@@ -269,19 +309,24 @@ def _isnum(v) -> bool:
 # ─────────────────────────────────────────────────────────────────────────
 # agent-store loading
 # ─────────────────────────────────────────────────────────────────────────
-def load_store(path: Path) -> list[Fact]:
+def load_store(path: Path):
+    """Load an agent's Dilmun store. Returns (facts, sources) where sources maps
+    fact.id -> the source string the agent recorded (for vetted_source_rate)."""
     data = json.loads(path.read_text(encoding="utf-8"))
     rows = data["facts"] if isinstance(data, dict) and "facts" in data else data
-    facts, seq = [], 0
+    facts, sources, seq = [], {}, 0
     for r in rows:
-        facts.append(Fact(
+        f = Fact(
             entity=str(r["entity"]), predicate=str(r["predicate"]), value=r["value"],
             timestamp=float(r.get("timestamp", 0.0)),
             confidence=float(r.get("confidence", 1.0)),
             seq=int(r.get("seq", seq)),
-        ))
+        )
+        facts.append(f)
+        if r.get("source"):
+            sources[f.id] = str(r["source"])
         seq += 1
-    return facts
+    return facts, sources
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -295,9 +340,11 @@ def print_report(title: str, seed: dict, res: dict):
     print(f"\n{title}")
     print("─" * 62)
     order = ["coverage", "veridicality", "confabulation_rate", "off_schema_rate",
-             "duplicate_suppression", "cross_domain_yield"]
+             "duplicate_suppression", "vetted_source_rate", "cross_domain_yield"]
     for k in order:
         print(f"  {k:<24}{pct(res[k]) if isinstance(res[k], float) else res[k]}")
+    if res.get("unvetted_sources"):
+        print(f"  {'⚠ unvetted sources':<24}{', '.join(res['unvetted_sources'])}")
     print(f"  {'canonical / raw':<24}{res['canonical_facts']} / {res['raw_writes']}  "
           f"({res['manifest_keys']} manifest keys)")
     if res["cross_domain_examples"]:
@@ -338,18 +385,18 @@ def main():
 
     if args.baseline:
         t0 = time.perf_counter()
-        store = baseline_store(seed, now=time.time())
+        store, sources = baseline_store(seed, now=time.time())
         wall = time.perf_counter() - t0
         snap = HERE / "ground_truth.json"
         snapshot(seed, snap)
-        res = score(seed, store, tokens=None, wall_seconds=wall or 1e-6)
+        res = score(seed, store, tokens=None, wall_seconds=wall or 1e-6, sources=sources)
         print_report("BASELINE (deterministic harvester — the floor)", seed, res)
         print(f"\nwrote snapshot → {snap}")
         (HERE / "nabu_results.json").write_text(json.dumps(res, indent=2, ensure_ascii=False), encoding="utf-8")
 
     if args.agent:
-        store = load_store(Path(args.agent))
-        res = score(seed, store, tokens=args.tokens, wall_seconds=None)
+        store, sources = load_store(Path(args.agent))
+        res = score(seed, store, tokens=args.tokens, wall_seconds=None, sources=sources)
         print_report(f"AGENT ({args.agent})", seed, res)
         (HERE / "nabu_agent_results.json").write_text(json.dumps(res, indent=2, ensure_ascii=False), encoding="utf-8")
 

@@ -57,7 +57,27 @@ construction). It is both the **floor** an agent must beat and the writer of
 | `duplicate_suppression` | canonical / raw — is `canonicalize()` earning its keep |
 | `cross_domain_yield` | `derive()` facts whose parents span two domains |
 | `efficiency` | canonical facts per 1k tokens (agent) or facts/sec (baseline) |
+| `vetted_source_rate` | of facts pulled from a source, the fraction that are academic/government |
 | `temporal_grounding` | `timer_stop − timer_start` — duration as a fact-difference |
+
+## Vetted sources only
+
+A Nabu mission may only trust **academic and government** sources. The allowlist
+lives in `vetted_sources.json` (PubChem, openFDA, RxNorm, PubMed, WHO, CDC on
+the gov tier; D-PLACE, OpenAlex, Scholar, arXiv, Crossref on the academic tier),
+plus domain patterns (`*.gov`, `*.edu`, `ncbi|nih|fda|…`).
+
+- `vetted_source_rate` scores what fraction of source-bearing facts came from
+  that allowlist; any others are printed as `⚠ unvetted sources`.
+- Derived (∘) facts carry no source — they're provenance-linked from vetted
+  parents — so they're excluded from the rate, not penalized.
+- In a live Pi mission the guard should **abstain** rather than write a fact
+  from an unvetted source, so a healthy run reads 100%.
+
+The **ACQUIRE** tab in `instrument/dilmun-instrument.html` is the interactive
+face of this: you (or, later, the Pi terminal) ask it to look something up, it
+draws only from the vetted sources, and it refuses — "guard · abstain" — when no
+vetted source carries the ask.
 
 ## Pi mission contract
 

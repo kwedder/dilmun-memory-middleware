@@ -62,6 +62,27 @@
   .src-tab:hover { border-color: var(--border-hover); color: var(--text-primary); }
   .src-tab.on { color: var(--accent); border-color: var(--border-accent); background: var(--accent-dim); }
   .src-tab .tag { font-size: 8.5px; letter-spacing: 0.12em; opacity: 0.7; }
+  .src-tab.primary { color: var(--accent); border-color: var(--border-accent); }
+  .src-tab.primary.on { background: var(--accent-glow); box-shadow: 0 0 12px var(--accent-dim); }
+  /* testing group dropdown */
+  .tab-group { position: relative; }
+  .grp-btn {
+    font: inherit; font-size: 10.5px; letter-spacing: 0.08em; color: var(--text-secondary);
+    background: none; border: 1px solid var(--border-subtle); border-radius: 999px;
+    padding: 5px 13px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px;
+  }
+  .grp-btn:hover { border-color: var(--border-hover); color: var(--text-primary); }
+  .grp-btn.on { color: var(--text-primary); border-color: var(--border-hover); }
+  .grp-cur { color: var(--accent); font-size: 9.5px; }
+  .grp-caret { font-size: 8px; opacity: 0.6; }
+  .grp-menu {
+    position: absolute; top: 34px; left: 0; z-index: 20; display: none;
+    flex-direction: column; gap: 4px; padding: 6px;
+    background: rgba(19,19,24,0.97); backdrop-filter: blur(14px);
+    border: 1px solid var(--border-subtle); border-radius: 10px; min-width: 160px;
+  }
+  .grp-menu.open { display: flex; }
+  .grp-menu .src-tab { text-align: left; border-radius: 7px; }
   .topbar .spacer { flex: 1; }
   .stat { font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.08em; }
   .stat b { color: var(--text-secondary); font-weight: 500; font-variant-numeric: tabular-nums; }
@@ -110,6 +131,29 @@
   .btn.ghost { background: none; color: var(--text-secondary); border-color: var(--border-subtle); }
   .btn.ghost:hover { color: var(--text-primary); border-color: var(--border-hover); }
   .btn:disabled { opacity: 0.35; cursor: default; }
+
+  /* ACQUIRE ask row */
+  .ask-row { display: flex; gap: 6px; margin-top: 11px; align-items: stretch; }
+  .ask-input {
+    flex: 1; min-width: 0; font: inherit; font-size: 11px;
+    background: #0c0c0f; color: var(--text-primary);
+    border: 1px solid var(--border-accent); border-radius: var(--radius-sm);
+    padding: 7px 10px; outline: none;
+  }
+  .ask-input::placeholder { color: var(--text-tertiary); }
+  .ask-input:focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-dim); }
+  .ask-row .btn { flex: 0 0 auto; padding: 7px 12px; }
+
+  /* vetted-source allowlist */
+  .vetted { display: flex; flex-direction: column; gap: 6px; }
+  .vrow { display: grid; grid-template-columns: 10px 1fr auto; gap: 8px; align-items: center; font-size: 10.5px; }
+  .vrow b { color: var(--text-primary); font-weight: 500; }
+  .vrow .vorg { color: var(--text-tertiary); font-size: 9px; text-align: right; }
+  .vdot { width: 7px; height: 7px; border-radius: 50%; }
+  .vdot.gov { background: var(--accent); box-shadow: 0 0 6px var(--accent-dim); }
+  .vdot.academic { background: var(--blue); box-shadow: 0 0 6px var(--blue-dim); }
+  .vtier { grid-column: 2 / 4; font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; display: none; }
+  .vetted-foot { margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--border); font-size: 9.5px; line-height: 1.5; color: var(--text-tertiary); }
 
   /* narrative log */
   .story { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -273,24 +317,25 @@
       <div class="panel">
         <h2 class="panel-title">Pipeline <span class="note" id="src-note"></span></h2>
         <div id="pipe"></div>
-        <div class="controls">
+        <div class="controls" id="test-controls">
           <button class="btn" id="btn-step">STEP</button>
           <button class="btn" id="btn-run">RUN ALL</button>
           <button class="btn ghost" id="btn-reset">RESET</button>
+        </div>
+        <div class="ask-row" id="ask-row" style="display:none">
+          <input id="ask-input" class="ask-input" placeholder="ask: epinephrine · naloxone · trobriand · *" autocomplete="off" spellcheck="false" />
+          <button class="btn" id="btn-ask">ASK</button>
+          <button class="btn ghost" id="btn-clear">CLR</button>
         </div>
       </div>
       <div class="panel story">
         <h2 class="panel-title">What just happened</h2>
         <div class="story-lines" id="story"></div>
       </div>
-      <div class="panel">
-        <h2 class="panel-title">Source adapters</h2>
-        <div class="adapters">
-          <span class="live">●</span> <a href="https://github.com/aiishii/JEMHopQA" target="_blank" rel="noreferrer">JEMHopQA</a> — real dev-split triples (loaded)<br>
-          ○ <a href="https://db.csail.mit.edu/labdata/labdata.html" target="_blank" rel="noreferrer">Intel Lab 54-mote telemetry</a> — planned<br>
-          ○ <a href="https://github.com/snap-research/locomo" target="_blank" rel="noreferrer">LoCoMo</a> · <a href="https://github.com/xiaowu0162/LongMemEval" target="_blank" rel="noreferrer">LongMemEval</a> — planned<br>
-          ○ openEASE NEEMs (robot episodes) — planned
-        </div>
+      <div class="panel" id="vetted-panel">
+        <h2 class="panel-title">Vetted sources <span class="note">academic · gov only</span></h2>
+        <div class="vetted" id="vetted-list"></div>
+        <div class="vetted-foot">The acquisition guard refuses any source outside this allowlist. Later, the Pi terminal drives asks into this same surface.</div>
       </div>
     </aside>
 
@@ -315,7 +360,7 @@
       <button class="vc-btn on" id="vc-persp">PERSPECTIVE</button>
       <button class="vc-btn" id="vc-ortho">ORTHOGONAL</button>
       <span class="vc-sep"></span>
-      <button class="vc-btn on" id="vc-spin">ROTATION&nbsp;<b>ON</b></button>
+      <button class="vc-btn" id="vc-spin">ROTATION&nbsp;<b>OFF</b></button>
     </div>
 
     <div class="legend">
@@ -512,7 +557,82 @@ const MISSION_SRC = [
 let activeFetch = null; // {src} while a tool_execution (web fetch) is in flight
 const fmtDur = s => { const m = Math.floor(s / 60); return `${m}m ${String(s % 60).padStart(2, "0")}s`; };
 
+/* ═══════════════ ACQUIRE — memory acquisition from VETTED sources only ═══════════════ */
+// Allowlist: academic + government only. A source not on this list is refused.
+const VETTED = [
+  { id: "pubchem",  label: "PubChem",        org: "NIH · NLM",      tier: "gov" },
+  { id: "openfda",  label: "openFDA",        org: "US FDA",         tier: "gov" },
+  { id: "pubmed",   label: "PubMed",         org: "NIH · NLM",      tier: "gov" },
+  { id: "dplace",   label: "D-PLACE",        org: "MPI · academic", tier: "academic" },
+  { id: "openalex", label: "OpenAlex",       org: "open science",   tier: "academic" },
+  { id: "scholar",  label: "Google Scholar", org: "academic index", tier: "academic" },
+];
+// domain patterns the guard trusts (everything else is refused)
+const VETTED_PATTERNS = [/\.gov$/, /\.edu$/, /\.int$/, /ncbi|nih|fda|who|cdc|europepmc/i,
+  /pubchem|pubmed|openalex|scholar|arxiv|d-?place|crossref|doaj|semanticscholar/i];
+const isVetted = src => VETTED.some(v => v.id === src) ||
+  VETTED_PATTERNS.some(rx => rx.test(String(src || "")));
+
+// peripheral node positions for the vetted sources (canvas beams draw to these)
+const ACQ_SRC = {
+  pubchem:  { x: -6.2, z: -3.0 }, openfda: { x: 6.0, z: -3.2 },
+  pubmed:   { x: -6.4, z: 2.6 },  dplace:  { x: 5.8, z: 3.0 }, openalex: { x: 0.4, z: 6.6 },
+};
+// the acquirable world — every value is sourced from a vetted authority (mirrors nabu_seed.json)
+const ACQ_DB = {
+  "water":       { domain: "chem", src: "pubchem", facts: { molecular_formula: "H2O", molecular_weight: "18.015" } },
+  "epinephrine": { domain: "chem", src: "pubchem", facts: { molecular_formula: "C9H13NO3", molecular_weight: "183.20", acts_on: "adrenergic_receptor" } },
+  "naloxone":    { domain: "chem", src: "pubchem", facts: { molecular_formula: "C19H21NO4", molecular_weight: "327.37" } },
+  "aspirin":     { domain: "chem", src: "pubchem", facts: { molecular_formula: "C9H8O4", molecular_weight: "180.16" } },
+  "caffeine":    { domain: "chem", src: "pubchem", facts: { molecular_formula: "C8H10N4O2", molecular_weight: "194.19", acts_on: "adenosine_receptor" } },
+  "glucose":     { domain: "chem", src: "pubchem", facts: { molecular_formula: "C6H12O6", molecular_weight: "180.16" } },
+  "med:epinephrine": { domain: "med", src: "openfda", facts: { drug_class: "sympathomimetic", indication: "anaphylaxis", active_moiety: "epinephrine", route: "IM" } },
+  "med:naloxone":    { domain: "med", src: "openfda", facts: { drug_class: "opioid_antagonist", indication: "opioid_overdose", active_moiety: "naloxone", route: "IV" } },
+  "med:aspirin":     { domain: "med", src: "openfda", facts: { drug_class: "antiplatelet", indication: "acute_coronary_syndrome", active_moiety: "aspirin", route: "PO" } },
+  "soc:juhoansi":  { domain: "anthro", src: "dplace", facts: { subsistence: "hunting_gathering", region: "kalahari_southern_africa" } },
+  "soc:nuer":      { domain: "anthro", src: "dplace", facts: { subsistence: "pastoralism", region: "nile_east_africa" } },
+  "soc:trobriand": { domain: "anthro", src: "dplace", facts: { subsistence: "horticulture", region: "melanesia", exchange: "kula_ring" } },
+};
+// find acquirable entities matching a free-text ask
+function acqMatch(term) {
+  const q = term.trim().toLowerCase().replace(/^(med|soc):/, "");
+  if (!q) return [];
+  return Object.keys(ACQ_DB).filter(id => id.toLowerCase().replace(/^(med|soc):/, "").includes(q));
+}
+
 const SOURCES = {
+  acquire: {
+    label: "ACQUIRE", tag: "MEMORY", interactive: true,
+    note: "ask it to look things up · vetted academic & government sources only",
+    steps: [],
+    renderQuery(st, el) {
+      const canon = canonicalize(st.store);
+      const derived = canon.filter(f => f.derivedFrom);
+      const sourced = st.store.filter(f => f.source);            // acquired-from-a-source facts
+      const vettedN = sourced.filter(f => isVetted(f.source)).length;
+      const rate = sourced.length ? vettedN / sourced.length : 1; // derived facts are provenance-linked, not re-sourced
+      let h = `<div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:10px;">Memory acquired from vetted sources. Ask above (or, later, via the Pi terminal) — the guard refuses anything not academic/government.</div>`;
+      if (!canon.length) {
+        h += `<div class="insp-empty">No facts yet. Try <b style="color:var(--accent)">epinephrine</b>, <b style="color:var(--accent)">naloxone</b>, <b style="color:var(--accent)">trobriand</b>, or <b style="color:var(--accent)">*</b> for all.</div>`;
+        el.innerHTML = h; return;
+      }
+      const byDom = {};
+      for (const f of canon) { const d = ACQ_DB[f.entity]?.domain || (f.derivedFrom ? "derived" : "?"); (byDom[d] ||= []).push(f); }
+      for (const [dom, fs] of Object.entries(byDom)) {
+        h += `<div style="font-size:9px;letter-spacing:0.18em;color:var(--text-tertiary);margin:8px 0 4px;text-transform:uppercase;">${dom} · ${fs.length}</div>`;
+        for (const f of fs.slice(0, 8)) {
+          h += `<div class="score-row" data-fid="${f.id}"><span class="fv">${f.entity.replace(/^(med|soc):/, "")}·${f.predicate} = ${f.value}</span>
+            <span class="sc" style="font-size:9px;color:var(--text-tertiary)">${f.source || "∘"}</span></div>`;
+        }
+      }
+      h += `<div class="baseline" style="border-style:solid;border-color:var(--border-accent)">
+        <b style="color:var(--accent)">${canon.length}</b> facts · <b style="color:var(--teal)">${derived.length}</b> cross-domain (∘) ·
+        vetted-source rate <b style="color:${rate === 1 ? 'var(--accent)' : 'var(--coral)'}">${(rate * 100).toFixed(0)}%</b>.
+        Every fact carries the authority it came from; the veridicality guard abstains on anything unvetted.</div>`;
+      el.innerHTML = h;
+    },
+  },
+
   jemhopqa: {
     label: "JEMHopQA", tag: "REAL", note: "dev split · aiishii/JEMHopQA",
     steps: [
@@ -775,34 +895,109 @@ function step() {
 
 function runAll() {
   clearInterval(runTimer);
+  if (SOURCES[srcKey].interactive) return;   // ACQUIRE is driven by asks, not a stepper
   runTimer = setInterval(() => { if (!step()) clearInterval(runTimer); }, reduced ? 60 : 1500);
 }
 
 function reset(newSrc) {
   clearInterval(runTimer);
   if (newSrc) srcKey = newSrc;
+  const src = SOURCES[srcKey];
   st = { store: [], lost: [], derived: [], retrieved: null, q: null, branches: null };
   stepIdx = -1; counts = []; selectedId = null; activeFetch = null;
   storyEl.innerHTML = ""; particles.clear(); retrievedIds.clear();
-  queryTitle.textContent = "Retrieval";
-  queryEl.innerHTML = '<span class="insp-empty">Run the pipeline — retrieval results, scores, and proofs appear here.</span>';
   inspEl.innerHTML = 'Click any particle (or a proof link) to inspect the fact tuple (e,&thinsp;p,&thinsp;v,&thinsp;t,&thinsp;ν) and its provenance.';
-  document.getElementById("src-note").textContent = SOURCES[srcKey].note;
+  document.getElementById("src-note").textContent = src.note;
   document.querySelectorAll(".src-tab").forEach(b => b.classList.toggle("on", b.dataset.src === srcKey));
-  renderPipe();
+  // interactive (ACQUIRE) vs step-based (TESTING) surfaces
+  const interactive = !!src.interactive;
+  document.getElementById("test-controls").style.display = interactive ? "none" : "flex";
+  document.getElementById("ask-row").style.display = interactive ? "flex" : "none";
+  document.getElementById("vetted-panel").style.display = interactive ? "" : "none";
+  if (interactive) {
+    queryTitle.textContent = "Acquired memory";
+    src.renderQuery(st, queryEl);
+  } else {
+    queryTitle.textContent = "Retrieval";
+    queryEl.innerHTML = '<span class="insp-empty">Run the pipeline — retrieval results, scores, and proofs appear here.</span>';
+  }
+  markDirty(); renderPipe();
 }
 
-/* tabs */
+/* ── ACQUIRE: ask it to look something up (vetted sources only) ── */
+function acquire(term) {
+  markDirty();
+  const q = (term || "").trim();
+  if (!q) return;
+  const all = q === "*" || /^all$/i.test(q);
+  const ids = all ? Object.keys(ACQ_DB) : acqMatch(q);
+  if (!ids.length) {
+    pushStory(`<span class="ev" style="color:var(--coral);background:rgba(240,112,80,0.1);border-color:rgba(240,112,80,0.25)">guard · abstain</span> <b>"${q}"</b> <span class="mut">— no vetted academic/government source carries this. The guard won't guess. Try a compound, a drug, or a society.</span>`, "forget");
+    return;
+  }
+  const prevIds = new Set(st.store.map(f => f.id));
+  let added = 0, seqBase = st.store.length;
+  for (const id of ids) {
+    const e = ACQ_DB[id];
+    activeFetch = { src: e.src };               // beam lights up while "fetching"
+    for (const [pred, val] of Object.entries(e.facts)) {
+      st.store.push(F(id, pred, val, NOW - (seqBase++ % 40), 0.97, { source: e.src }));
+      added++;
+    }
+  }
+  activeFetch = null;
+  // canonicalize (dedupe) then compose (bridge domains) — the real operators
+  st.store = canonicalize(st.store);
+  const d = derive(st.store, st.store.length);
+  if (d.length) st.store = st.store.concat(canonicalize(st.store.concat(d)).filter(f => f.derivedFrom));
+  st.store = canonicalize(st.store);
+  const src = VETTED.find(v => ids.some(i => ACQ_DB[i].src === v.id));
+  const doms = [...new Set(ids.map(i => ACQ_DB[i].domain))];
+  pushStory(`<span class="ev">acquired</span> <b>+${added} facts</b> <span class="mut">on ${ids.length} ${ids.length > 1 ? "entities" : "entity"} (${doms.join(", ")}) from vetted sources. Canonicalized + composed — cross-domain bridges derived where a drug's moiety meets its compound.</span>`, "settled");
+  syncParticles(prevIds);
+  SOURCES.acquire.renderQuery(st, queryEl);
+  bindProofLinks();
+  document.getElementById("st-facts").textContent = st.store.length;
+  document.getElementById("st-derived").textContent = st.store.filter(f => f.derivedFrom).length;
+}
+
+/* tabs — ACQUIRE (primary) + TESTING (grouped demos) */
+const TEST_KEYS = ["jemhopqa", "robot", "mission"];
 const tabsEl = document.getElementById("src-tabs");
-tabsEl.innerHTML = Object.entries(SOURCES).map(([k, s]) =>
-  `<button class="src-tab" data-src="${k}">${s.label} <span class="tag">${s.tag}</span></button>`).join("");
+function renderTabs() {
+  tabsEl.innerHTML =
+    `<button class="src-tab primary" data-src="acquire">ACQUIRE <span class="tag">MEMORY</span></button>
+     <div class="tab-group">
+       <button class="grp-btn" id="grp-btn">TESTING <span class="grp-cur" id="grp-cur"></span><span class="grp-caret">▾</span></button>
+       <div class="grp-menu" id="grp-menu">${TEST_KEYS.map(k =>
+         `<button class="src-tab" data-src="${k}">${SOURCES[k].label} <span class="tag">${SOURCES[k].tag}</span></button>`).join("")}</div>
+     </div>`;
+  document.querySelectorAll(".src-tab").forEach(b => b.classList.toggle("on", b.dataset.src === srcKey));
+  document.getElementById("grp-btn").classList.toggle("on", TEST_KEYS.includes(srcKey));
+  document.getElementById("grp-cur").textContent = TEST_KEYS.includes(srcKey) ? "· " + SOURCES[srcKey].label : "";
+}
 tabsEl.addEventListener("click", e => {
+  const grp = e.target.closest("#grp-btn");
+  if (grp) { document.getElementById("grp-menu").classList.toggle("open"); return; }
   const b = e.target.closest(".src-tab");
-  if (b) { reset(b.dataset.src); runAll(); }
+  if (b) {
+    document.getElementById("grp-menu").classList.remove("open");
+    reset(b.dataset.src); runAll(); renderTabs();
+    if (srcKey === "acquire") document.getElementById("ask-input").focus();
+  }
+});
+document.addEventListener("click", e => {
+  if (!e.target.closest(".tab-group")) document.getElementById("grp-menu")?.classList.remove("open");
 });
 document.getElementById("btn-step").addEventListener("click", () => { clearInterval(runTimer); step(); });
 document.getElementById("btn-run").addEventListener("click", runAll);
 document.getElementById("btn-reset").addEventListener("click", () => reset());
+document.getElementById("btn-ask").addEventListener("click", () => { const i = document.getElementById("ask-input"); acquire(i.value); i.value = ""; i.focus(); });
+document.getElementById("ask-input").addEventListener("keydown", e => { if (e.key === "Enter") { acquire(e.target.value); e.target.value = ""; } });
+document.getElementById("btn-clear").addEventListener("click", () => reset());
+// vetted-source allowlist panel
+document.getElementById("vetted-list").innerHTML = VETTED.map(v =>
+  `<div class="vrow"><span class="vdot ${v.tier}"></span><b>${v.label}</b><span class="vorg">${v.org}</span><span class="vtier ${v.tier}">${v.tier}</span></div>`).join("");
 
 /* inspector */
 function allKnownFacts() {
@@ -842,6 +1037,7 @@ function inspect(id) {
   }
   inspEl.innerHTML = h;
   bindProofLinks();
+  markDirty();
 }
 function bindProofLinks() {
   document.querySelectorAll("[data-fid]").forEach(el =>
@@ -857,11 +1053,30 @@ function hash01(s) {
 const canvas = document.getElementById("universe");
 const ctx = canvas.getContext("2d");
 let CW = 0, CH = 0;
+
+// ── performance: only paint when something is actually changing, and never
+//    while a terminal tile has focus — keeps the integrated shell buttery.
+//    (declared before resizeCanvas() so its markDirty() call is safe.)
+let dirty = 4, termFocused = false;
+function markDirty() { dirty = 4; }
+document.addEventListener("focusin", e => {
+  termFocused = !!(e.target.closest && e.target.closest(".term-tile"));
+  markDirty();
+});
+document.addEventListener("focusout", e => {
+  if (!(e.target.closest && e.target.closest(".term-tile"))) return;
+  const to = e.relatedTarget;
+  if (!to || !(to.closest && to.closest(".term-tile"))) { termFocused = false; markDirty(); }
+});
+const bodyFont = () => "10px " + getComputedStyle(document.body).fontFamily;
+let cachedFont = "";
+
 function resizeCanvas() {
   const dpr = Math.min(devicePixelRatio || 1, 2);
   CW = canvas.clientWidth; CH = canvas.clientHeight;
   canvas.width = CW * dpr; canvas.height = CH * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (typeof markDirty === "function") markDirty();
 }
 resizeCanvas();
 new ResizeObserver(resizeCanvas).observe(canvas);
@@ -870,7 +1085,7 @@ const FOCAL = 640, CAMD = 9.5;
 const ORTHO_PPW = 62;                       // px per world-unit in orthographic mode
 const ORTHO_S = ORTHO_PPW / (FOCAL * 0.82); // so particle sizing matches perspective
 let yaw = 0.4;
-let spin = true;      // rotation toggle
+let spin = false;     // rotation toggle — default OFF (calm + fast; idle skips paint)
 let ortho = false;    // orthographic (parallel) alignment toggle
 let pitch = 0.5;      // eased toward a snap angle in ortho
 function project(x, y, z) {
@@ -941,10 +1156,16 @@ function drawCrystal(px, py, r, color, glow) {
 }
 
 function frame(t) {
+  // while typing in a terminal, freeze the canvas entirely (CPU goes to the shell)
+  if (termFocused) { requestAnimationFrame(frame); return; }
+  const inTransit = activeFetch ||
+    (() => { for (const p of particles.values()) if (p.dying || p.alpha < 1) return true; return false; })();
+  const easing = Math.abs((ortho ? 0.62 : 0.5) - pitch) > 0.002;
+  if (!(spin || inTransit || easing || dirty > 0)) { requestAnimationFrame(frame); return; } // idle → skip paint
+  if (dirty > 0) dirty--;
   if (spin && !reduced) yaw += 0.00028 * 16;
-  // ease pitch toward a cleaner angle when aligned orthographically
-  const targetPitch = ortho ? 0.62 : 0.5;
-  pitch += (targetPitch - pitch) * 0.08;
+  pitch += ((ortho ? 0.62 : 0.5) - pitch) * 0.08;
+  if (!cachedFont) cachedFont = bodyFont();
   ctx.clearRect(0, 0, CW, CH);
   const g = ctx.createRadialGradient(CW / 2, CH / 2, 0, CW / 2, CH / 2, Math.max(CW, CH) * 0.7);
   g.addColorStop(0, "#0a0a0c"); g.addColorStop(1, "#050506");
@@ -954,7 +1175,7 @@ function frame(t) {
   const entIdx = new Map(ents.map((e, i) => [e, i]));
 
   // entity wells
-  ctx.font = "10px " + getComputedStyle(document.body).fontFamily;
+  ctx.font = cachedFont;
   ctx.textAlign = "center";
   for (const e of ents) {
     const ep = entityPos(e, entIdx.get(e), ents.length);
@@ -968,11 +1189,14 @@ function frame(t) {
     ctx.fillText(label.length > 16 ? label.slice(0, 15) + "…" : label, p.x, p.y + r * 0.62);
   }
 
-  // ── Pi mission: external web sources + live fetch beam ──
-  if (srcKey === "mission") {
+  // ── mission / acquire: external sources + live fetch beam ──
+  const srcNodes = srcKey === "mission" ? MISSION_SRC
+    : srcKey === "acquire" ? VETTED.filter(v => ACQ_SRC[v.id]).map(v => ({ id: v.id, label: v.label, x: ACQ_SRC[v.id].x, z: ACQ_SRC[v.id].z }))
+    : null;
+  if (srcNodes) {
     const center = project(0, 0, 0);
     if (activeFetch) {
-      const s = MISSION_SRC.find(m => m.id === activeFetch.src);
+      const s = srcNodes.find(m => m.id === activeFetch.src);
       if (s) {
         const q = project(s.x, 0.3, s.z);
         ctx.strokeStyle = "rgba(77,139,240,0.65)"; ctx.lineWidth = 1.4;
@@ -981,8 +1205,8 @@ function frame(t) {
         ctx.setLineDash([]);
       }
     }
-    ctx.font = "9px " + getComputedStyle(document.body).fontFamily;
-    for (const s of MISSION_SRC) {
+    ctx.font = cachedFont;
+    for (const s of srcNodes) {
       const p = project(s.x, 0.3, s.z);
       const live = activeFetch && activeFetch.src === s.id;
       const pulse = live ? 3 + Math.sin(t * 0.02) * 2 : 0;
@@ -1094,11 +1318,11 @@ function frame(t) {
     }
   }
 
-  // mission: provenance beams from web source → freshly-written fact (while condensing)
-  if (srcKey === "mission") {
+  // mission / acquire: provenance beams from source → freshly-written fact (while condensing)
+  if (srcNodes) {
     for (const { p, pr } of drawList) {
       if (!p.f.source || p.alpha >= 1) continue;
-      const s = MISSION_SRC.find(m => m.id === p.f.source);
+      const s = srcNodes.find(m => m.id === p.f.source);
       if (!s) continue;
       const q = project(s.x, 0.3, s.z);
       ctx.strokeStyle = `rgba(77,139,240,${0.55 * (1 - p.alpha)})`;
@@ -1239,19 +1463,20 @@ const vcPersp = document.getElementById("vc-persp");
 const vcOrtho = document.getElementById("vc-ortho");
 const vcSpin = document.getElementById("vc-spin");
 vcPersp.addEventListener("click", () => {
-  ortho = false; vcPersp.classList.add("on"); vcOrtho.classList.remove("on");
+  ortho = false; vcPersp.classList.add("on"); vcOrtho.classList.remove("on"); markDirty();
 });
 vcOrtho.addEventListener("click", () => {
-  ortho = true; vcOrtho.classList.add("on"); vcPersp.classList.remove("on");
+  ortho = true; vcOrtho.classList.add("on"); vcPersp.classList.remove("on"); markDirty();
 });
 vcSpin.addEventListener("click", () => {
   spin = !spin;
   vcSpin.classList.toggle("on", spin);
   vcSpin.innerHTML = `ROTATION&nbsp;<b>${spin ? "ON" : "OFF"}</b>`;
+  markDirty();
 });
 
-/* boot */
-reset("jemhopqa");
-runAll();
+/* boot — start on ACQUIRE (memory acquisition) */
+renderTabs();
+reset("acquire");
 })();
 </script>
