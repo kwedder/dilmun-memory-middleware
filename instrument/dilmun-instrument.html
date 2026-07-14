@@ -200,14 +200,28 @@
   /* terminals — tile-managed local shells */
   .term-panel { display: flex; flex-direction: column; min-height: 0; }
   .term-panel.has-tiles { flex: 2.4; }
-  #term-new {
+  .term-btns { display: flex; gap: 5px; }
+  #term-new, #term-console {
     font: inherit; font-size: 9px; letter-spacing: 0.1em;
     color: var(--accent); background: var(--accent-dim);
     border: 1px solid var(--border-accent); border-radius: 4px;
     padding: 2px 9px; cursor: pointer; transition: all 0.2s;
   }
-  #term-new:hover { background: var(--accent-glow); }
+  #term-new { color: var(--text-secondary); background: none; border-color: var(--border-subtle); }
+  #term-new:hover { color: var(--text-primary); border-color: var(--border-hover); }
+  #term-console:hover { background: var(--accent-glow); }
   #term-tiles { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+  /* dilmun console REPL */
+  .term-tile.console { border-color: var(--border-accent); }
+  .con-in-row { display: flex; align-items: center; gap: 6px; padding: 5px 9px; border-top: 1px solid var(--border); background: #0b0b0e; flex: none; }
+  .con-prompt { color: var(--accent); font-size: 11px; flex: none; }
+  .con-input { flex: 1; min-width: 0; background: none; border: none; outline: none; color: var(--text-primary); font: inherit; font-size: 11px; }
+  .con-input::placeholder { color: var(--text-tertiary); }
+  .term-out .c-acc { color: var(--accent); }
+  .term-out .c-teal { color: var(--teal); }
+  .term-out .c-coral { color: var(--coral); }
+  .term-out .c-dim { color: var(--text-tertiary); }
+  .term-out .c-you { color: var(--text-primary); }
   .term-tile {
     flex: 1; min-height: 92px; display: flex; flex-direction: column;
     background: #08080b; border: 1px solid var(--border-subtle);
@@ -349,9 +363,11 @@
         <div id="insp" class="insp-empty">Click any particle (or a proof link) to inspect the fact tuple (e,&thinsp;p,&thinsp;v,&thinsp;t,&thinsp;ν) and its provenance.</div>
       </div>
       <div class="panel term-panel" id="term-panel">
-        <h2 class="panel-title">Terminals · linux <button id="term-new">+ TILE</button></h2>
+        <h2 class="panel-title">Console · context window
+          <span class="term-btns"><button id="term-console">+ CONSOLE</button><button id="term-new">+ SHELL</button></span>
+        </h2>
         <div id="term-tiles"></div>
-        <div id="term-hint" class="insp-empty">Tile-managed local shells, Claude-Code-style. Start the zero-dep bridge on your machine:<br><code style="color:var(--accent)">node instrument/server.mjs</code><br>then open <code style="color:var(--accent)">http://127.0.0.1:8420</code> and click + TILE.</div>
+        <div id="term-hint" class="insp-empty">The <b style="color:var(--accent)">console</b> is the channel the memory collects from — ask it to look things up and facts flow into Dilmun. <b style="color:var(--accent)">+ SHELL</b> opens a real Linux terminal (needs the bridge: <code style="color:var(--accent)">node instrument/server.mjs</code>).</div>
       </div>
     </aside>
 
@@ -1059,14 +1075,17 @@ let CW = 0, CH = 0;
 //    (declared before resizeCanvas() so its markDirty() call is safe.)
 let dirty = 4, termFocused = false;
 function markDirty() { dirty = 4; }
+// only raw shells freeze the canvas (they stream heavily); the lightweight
+// dilmun console must keep the universe live so acquired facts appear.
+const SHELL_SEL = ".term-tile:not(.console)";
 document.addEventListener("focusin", e => {
-  termFocused = !!(e.target.closest && e.target.closest(".term-tile"));
+  termFocused = !!(e.target.closest && e.target.closest(SHELL_SEL));
   markDirty();
 });
 document.addEventListener("focusout", e => {
-  if (!(e.target.closest && e.target.closest(".term-tile"))) return;
+  if (!(e.target.closest && e.target.closest(SHELL_SEL))) return;
   const to = e.relatedTarget;
-  if (!to || !(to.closest && to.closest(".term-tile"))) { termFocused = false; markDirty(); }
+  if (!to || !(to.closest && to.closest(SHELL_SEL))) { termFocused = false; markDirty(); }
 });
 const bodyFont = () => "10px " + getComputedStyle(document.body).fontFamily;
 let cachedFont = "";
@@ -1453,10 +1472,81 @@ class TermTile {
   }
 }
 function layoutTerms() {
-  termPanelEl.classList.toggle("has-tiles", termTiles.size > 0);
-  termHintEl.style.display = termTiles.size ? "none" : "";
+  const has = termTilesEl.children.length > 0;
+  termPanelEl.classList.toggle("has-tiles", has);
+  termHintEl.style.display = has ? "none" : "";
 }
+
+/* ═══════════════ Dilmun console — the context window the memory collects from ═══════════════
+   A local REPL (no bridge needed) that routes every ask through acquire()/retrieve().
+   This is the seam the Pi harness plugs into: pipe Pi's input/output through here and
+   the same commands become the harness's memory-collection channel. */
+class DilmunConsole {
+  constructor() {
+    this.el = document.createElement("div");
+    this.el.className = "term-tile console"; this.el.tabIndex = 0;
+    this.el.innerHTML =
+      `<div class="term-head"><span class="term-title" style="color:var(--accent)">dilmun · console</span><button class="term-x" title="close">×</button></div>
+       <pre class="term-out"></pre>
+       <div class="con-in-row"><span class="con-prompt">dilmun&gt;</span><input class="con-input" placeholder="ask a term, or: recall / stats / forget / help" autocomplete="off" spellcheck="false"/></div>`;
+    this.out = this.el.querySelector(".term-out");
+    this.input = this.el.querySelector(".con-input");
+    this.el.querySelector(".term-x").onclick = () => { this.el.remove(); layoutTerms(); };
+    this.el.addEventListener("click", () => this.input.focus());
+    this.input.addEventListener("keydown", e => { if (e.key === "Enter") { this.run(this.input.value); this.input.value = ""; } });
+    termTilesEl.appendChild(this.el);
+    layoutTerms();
+    this.print(`<span class="c-acc">dilmun memory console</span> — the context window. Everything asked here is collected into memory from <span class="c-acc">vetted sources only</span>.`);
+    this.print(`<span class="c-dim">try:</span> epinephrine · naloxone · trobriand · * · recall battery · stats · help`);
+    setTimeout(() => this.input.focus(), 0);
+  }
+  print(html) {
+    const div = document.createElement("div");
+    div.innerHTML = html;
+    this.out.appendChild(div);
+    this.out.scrollTop = this.out.scrollHeight;
+  }
+  ensureAcquire() { if (srcKey !== "acquire") { reset("acquire"); renderTabs(); } }
+  run(line) {
+    line = (line || "").trim();
+    if (!line) return;
+    this.print(`<span class="con-prompt">dilmun&gt;</span> <span class="c-you">${line.replace(/</g, "&lt;")}</span>`);
+    const [cmd, ...rest] = line.split(/\s+/);
+    const arg = rest.join(" ");
+    if (cmd === "help") {
+      this.print(`<span class="c-dim">commands:</span> <span class="c-acc">&lt;term&gt;</span>/acquire/find — collect facts (vetted only) · <span class="c-acc">recall &lt;q&gt;</span> — retrieve · <span class="c-acc">stats</span> · <span class="c-acc">forget</span> · <span class="c-acc">clear</span>`);
+    } else if (cmd === "clear") {
+      this.out.innerHTML = "";
+    } else if (cmd === "stats") {
+      const canon = canonicalize(st.store);
+      this.print(`<span class="c-acc">${canon.length}</span> facts · <span class="c-teal">${canon.filter(f => f.derivedFrom).length}</span> derived (∘) · <span class="c-dim">entities</span> ${new Set(canon.map(f => f.entity)).size}`);
+    } else if (cmd === "forget") {
+      const before = st.store.length;
+      st.store = forget(st.store, { now: NOW, minConfidence: 0.5 });
+      SOURCES.acquire.renderQuery(st, queryEl); markDirty();
+      this.print(`<span class="c-coral">forget</span> — ${before} → ${st.store.length} (dropped low-ν / expired)`);
+    } else if (cmd === "recall" || cmd === "retrieve") {
+      const q = arg.toLowerCase();
+      const cands = canonicalize(st.store).filter(f => !q || (f.entity + " " + f.predicate + " " + f.value).toLowerCase().includes(q));
+      if (!cands.length) { this.print(`<span class="c-dim">nothing in memory matches "${arg || "*"}". acquire it first.</span>`); return; }
+      const { ranked, scores } = retrieve(cands, 5);
+      this.print(`<span class="c-dim">top ${ranked.length} by score(f) = 0.5ν + 0.3recency + 0.2centrality:</span>`);
+      for (const f of ranked) this.print(`  <span class="c-acc">${scores.get(f.id).total.toFixed(3)}</span> ${f.entity.replace(/^(med|soc):/, "")}·${f.predicate} = ${f.value} <span class="c-dim">${f.source || "∘"}</span>`);
+    } else {
+      // bare term / acquire / find / look → collect from vetted sources
+      const term = (cmd === "acquire" || cmd === "find" || cmd === "look") ? arg : line;
+      this.ensureAcquire();
+      const before = st.store.length;
+      acquire(term);
+      const added = st.store.length - before;
+      if (added > 0) this.print(`<span class="c-acc">+${added}</span> facts collected → memory now holds <span class="c-acc">${st.store.length}</span>. <span class="c-dim">(see the ACQUIRE universe)</span>`);
+      else this.print(`<span class="c-coral">guard · abstain</span> — no vetted academic/government source carries "${term}". Not collected.`);
+    }
+  }
+}
+
 document.getElementById("term-new").addEventListener("click", () => new TermTile());
+document.getElementById("term-console").addEventListener("click", () => new DilmunConsole());
 
 /* view controls */
 const vcPersp = document.getElementById("vc-persp");
@@ -1475,8 +1565,9 @@ vcSpin.addEventListener("click", () => {
   markDirty();
 });
 
-/* boot — start on ACQUIRE (memory acquisition) */
+/* boot — start on ACQUIRE (memory acquisition), with the console open as the context window */
 renderTabs();
 reset("acquire");
+new DilmunConsole();
 })();
 </script>
