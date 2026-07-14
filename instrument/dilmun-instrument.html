@@ -926,11 +926,34 @@ function reset(newSrc) {
    (vetted only). This is the pi.dev seam: point /acquire at a `pi` RPC run
    (dilmun_write_fact restricted to the same allowlist) and the console drives
    Pi's own web search instead. ── */
-let BRIDGE = false;
+let BRIDGE = false, lastVault = -1;
+
+// mirror the bridge's shared vault into st.store (the vault is the source of truth,
+// so what the pi.dev harness collects shows up here too). derive() adds cross-domain
+// bridges for display; the guard keeps vetted-only.
+function syncFromVault(vaultFacts) {
+  lastVault = (vaultFacts || []).length;
+  const prev = new Set(st.store.map(f => f.id));
+  st.store = (vaultFacts || []).filter(f => isVetted(f.source)).map(f => ({ ...f }));
+  const der = derive(st.store, st.store.length);
+  if (der.length) st.store = canonicalize(st.store.concat(der));
+  syncParticles(prev);
+  if (srcKey === "acquire") { SOURCES.acquire.renderQuery(st, queryEl); bindProofLinks(); }
+  markDirty();
+  document.getElementById("st-facts").textContent = st.store.length;
+  document.getElementById("st-derived").textContent = st.store.filter(f => f.derivedFrom).length;
+}
+async function loadVault() {
+  if (!BRIDGE) return;
+  try { const d = await (await fetch("/facts")).json(); if (d.facts.length !== lastVault) syncFromVault(d.facts); } catch {}
+}
 (function detectBridge() {
   const local = location.protocol === "http:" || /^(127\.|localhost|0\.0\.0\.0)/.test(location.hostname);
   if (!local) return;
-  fetch("/health").then(r => r.ok ? r.text() : "").then(t => { BRIDGE = (t === "ok"); }).catch(() => {});
+  fetch("/health").then(r => r.ok ? r.text() : "").then(t => {
+    BRIDGE = (t === "ok");
+    if (BRIDGE) { loadVault(); setInterval(() => { if (srcKey === "acquire") loadVault(); }, 4000); }
+  }).catch(() => {});
 })();
 
 async function tryLive(term) {
@@ -938,19 +961,8 @@ async function tryLive(term) {
   let d;
   try { d = await (await fetch("/acquire?q=" + encodeURIComponent(term))).json(); }
   catch { return null; }
-  const rows = (d.facts || []).filter(f => isVetted(f.source));  // enforce vetted even on live
-  if (!rows.length) return { added: 0, sources: d.sources || [] };
-  const prev = new Set(st.store.map(f => f.id));
-  let seqb = st.store.length;
-  for (const f of rows) st.store.push(F(f.entity, f.predicate, String(f.value), NOW - (seqb++ % 40), f.confidence || 0.9, { source: f.source }));
-  st.store = canonicalize(st.store);
-  const der = derive(st.store, st.store.length);
-  if (der.length) st.store = canonicalize(st.store.concat(der));
-  syncParticles(prev);
-  SOURCES.acquire.renderQuery(st, queryEl); bindProofLinks(); markDirty();
-  document.getElementById("st-facts").textContent = st.store.length;
-  document.getElementById("st-derived").textContent = st.store.filter(f => f.derivedFrom).length;
-  return { added: rows.length, sources: d.sources || [] };
+  syncFromVault(d.facts);   // shared vault is the source of truth
+  return { added: d.added || 0, sources: d.sources || [] };
 }
 
 // live-only entry point — real vetted-source lookup, or nothing
@@ -1515,9 +1527,8 @@ class DilmunConsole {
       this.print(`<span class="c-acc">${canon.length}</span> facts · <span class="c-teal">${canon.filter(f => f.derivedFrom).length}</span> derived (∘) · <span class="c-dim">entities</span> ${new Set(canon.map(f => f.entity)).size}`);
     } else if (cmd === "forget") {
       const before = st.store.length;
-      st.store = forget(st.store, { now: NOW, minConfidence: 0.5 });
-      SOURCES.acquire.renderQuery(st, queryEl); markDirty();
-      this.print(`<span class="c-coral">forget</span> — ${before} → ${st.store.length} (dropped low-ν / expired)`);
+      if (BRIDGE) { fetch("/forget").then(() => { lastVault = -1; loadVault(); }); this.print(`<span class="c-coral">forget</span> — clearing the shared vault…`); }
+      else { st.store = forget(st.store, { now: NOW, minConfidence: 0.5 }); SOURCES.acquire.renderQuery(st, queryEl); markDirty(); this.print(`<span class="c-coral">forget</span> — ${before} → ${st.store.length}`); }
     } else if (cmd === "recall" || cmd === "retrieve") {
       const q = arg.toLowerCase();
       const cands = canonicalize(st.store).filter(f => !q || (f.entity + " " + f.predicate + " " + f.value).toLowerCase().includes(q));
