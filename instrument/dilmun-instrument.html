@@ -223,6 +223,7 @@
   .con-input::placeholder { color: var(--text-tertiary); }
   .term-out .c-acc { color: var(--accent); }
   .term-out .c-teal { color: var(--teal); }
+  .term-out .c-blue { color: var(--blue); }
   .term-out .c-coral { color: var(--coral); }
   .term-out .c-dim { color: var(--text-tertiary); }
   .term-out .c-you { color: var(--text-primary); }
@@ -966,10 +967,11 @@ async function tryLive(term) {
   try { d = await (await fetch("/acquire?q=" + encodeURIComponent(term))).json(); }
   catch { return null; }
   syncFromVault(d.facts);   // shared vault is the source of truth
-  return { added: d.added || 0, sources: d.sources || [] };
+  return { status: d.status, added: d.added || 0, already: d.already || 0, sources: d.sources || [] };
 }
 
-// live-only entry point — real vetted-source lookup, or nothing
+// live-only entry point — real vetted-source lookup, or nothing.
+// PROGRESSIVE: the bridge checks what it already knows before searching.
 async function doAcquire(term, report) {
   term = (term || "").trim();
   if (!term) return 0;
@@ -980,6 +982,7 @@ async function doAcquire(term, report) {
     return 0;
   }
   const live = await tryLive(term);
+  if (live && live.status === "known") { report(`<span class="c-teal">already known</span> — ${live.already} facts about "${esc}"; <span class="c-dim">skipped the search (retrieval is progressive). recall ${esc} to see them.</span>`); return 0; }
   if (live && live.added > 0) { report(`<span class="c-acc">+${live.added}</span> facts collected live from <span class="c-acc">${live.sources.join(", ")}</span> → memory holds <span class="c-acc">${st.store.length}</span>.`); return live.added; }
   report(`<span class="c-coral">guard · abstain</span> — no vetted academic/government source returned facts for "${esc}".`);
   return 0;
@@ -1530,12 +1533,24 @@ class DilmunConsole {
     const [cmd, ...rest] = line.split(/\s+/);
     const arg = rest.join(" ");
     if (cmd === "help") {
-      this.print(`<span class="c-dim">commands:</span> <span class="c-acc">&lt;term&gt;</span>/acquire/find — collect facts (vetted only) · <span class="c-acc">recall &lt;q&gt;</span> — retrieve · <span class="c-acc">stats</span> · <span class="c-acc">forget</span> · <span class="c-acc">clear</span>`);
+      this.print(`<span class="c-dim">commands:</span> <span class="c-acc">&lt;term&gt;</span> — collect (skips if already known) · <span class="c-acc">recall &lt;q&gt;</span> · <span class="c-acc">stats</span> — memory + compactness · <span class="c-acc">explore</span> — expand the frontier · <span class="c-acc">forget</span> · <span class="c-acc">clear</span>`);
     } else if (cmd === "clear") {
       this.out.innerHTML = "";
     } else if (cmd === "stats") {
-      const canon = canonicalize(st.store);
-      this.print(`<span class="c-acc">${canon.length}</span> facts · <span class="c-teal">${canon.filter(f => f.derivedFrom).length}</span> derived (∘) · <span class="c-dim">entities</span> ${new Set(canon.map(f => f.entity)).size}`);
+      if (!BRIDGE) { this.print(`<span class="c-dim">stats need the bridge (the persistent database lives there).</span>`); return; }
+      fetch("/stats").then(r => r.json()).then(s => {
+        this.print(`<span class="c-acc">${s.entities}</span> entities · <span class="c-acc">${s.stored_facts}</span> stored facts · <span class="c-dim">${s.avg_preds_per_entity}/entity</span>`);
+        this.print(`<span class="c-teal">compact:</span> answer <span class="c-acc">${s.answerable_total}</span> facts while storing <span class="c-acc">${s.stored_facts}</span> (<span class="c-teal">${s.derivable_via_compose}</span> derived free via ∘) · dedup <span class="c-acc">${s.dedup_ratio}×</span> · <span class="c-dim">${s.bytes_per_fact} bytes/fact</span>`);
+        this.print(`<span class="c-blue">frontier:</span> ${s.frontier_size} known-but-unexplored${s.frontier.length ? " — " + s.frontier.slice(0, 6).map(f => f.entity).join(", ") : ""}`);
+      }).catch(() => this.print(`<span class="c-coral">stats unavailable</span>`));
+    } else if (cmd === "explore") {
+      if (!BRIDGE) { this.print(`<span class="c-dim">explore needs the bridge.</span>`); return; }
+      fetch("/stats").then(r => r.json()).then(s => {
+        const next = (s.frontier || []).find(f => !/^[\d.,\s%_-]+$/.test(f.entity));
+        if (!next) { this.print(`<span class="c-dim">frontier is empty — acquire something first.</span>`); return; }
+        this.print(`<span class="c-blue">explore</span> → <span class="c-acc">${next.entity.replace(/</g, "&lt;")}</span> <span class="c-dim">(mentioned ${next.mentions}× but not yet explored)</span>`);
+        doAcquire(next.entity, msg => this.print(msg));
+      }).catch(() => this.print(`<span class="c-coral">explore unavailable</span>`));
     } else if (cmd === "forget") {
       const before = st.store.length;
       if (BRIDGE) { fetch("/forget").then(() => { lastVault = -1; loadVault(); }); this.print(`<span class="c-coral">forget</span> — clearing the shared vault…`); }
