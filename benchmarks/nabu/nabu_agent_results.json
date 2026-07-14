@@ -1,0 +1,32 @@
+{
+  "manifest_keys": 74,
+  "raw_writes": 73,
+  "canonical_facts": 71,
+  "coverage": 0.9189,
+  "veridicality": 0.8923,
+  "confabulation_rate": 0.0147,
+  "off_schema_rate": 0.0423,
+  "duplicate_suppression": 0.9726,
+  "vetted_source_rate": 0.9859,
+  "unvetted_sources": [
+    "reddit.com"
+  ],
+  "cross_domain_yield": 24,
+  "cross_domain_examples": [
+    "med:epinephrine ∘ epinephrine ⇒ active_moiety_molecular_weight = 183.2",
+    "med:epinephrine ∘ epinephrine ⇒ active_moiety_cid = 5816",
+    "med:epinephrine ∘ epinephrine ⇒ active_moiety_acts_on = adrenergic_receptor",
+    "med:epinephrine ∘ epinephrine ⇒ active_moiety_molecular_formula = C9H13NO3",
+    "med:naloxone ∘ naloxone ⇒ active_moiety_molecular_formula = C19H21NO4",
+    "med:naloxone ∘ naloxone ⇒ active_moiety_molecular_weight = 327.37"
+  ],
+  "efficiency": {
+    "canonical_facts_per_1k_tokens": 1.69,
+    "tokens": 42000
+  },
+  "temporal_grounding": {
+    "present": true,
+    "elapsed_seconds": 312.0,
+    "basis": "t_stop - t_start (fact-difference)"
+  }
+}

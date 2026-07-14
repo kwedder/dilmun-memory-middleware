@@ -1,0 +1,29 @@
+{
+  "manifest_keys": 74,
+  "raw_writes": 74,
+  "canonical_facts": 74,
+  "coverage": 1.0,
+  "veridicality": 1.0,
+  "confabulation_rate": 0.0,
+  "off_schema_rate": 0.0,
+  "duplicate_suppression": 1.0,
+  "vetted_source_rate": 1.0,
+  "unvetted_sources": [],
+  "cross_domain_yield": 23,
+  "cross_domain_examples": [
+    "med:epinephrine ∘ epinephrine ⇒ active_moiety_molecular_formula = C9H13NO3",
+    "med:epinephrine ∘ epinephrine ⇒ active_moiety_molecular_weight = 183.2",
+    "med:epinephrine ∘ epinephrine ⇒ active_moiety_cid = 5816",
+    "med:epinephrine ∘ epinephrine ⇒ active_moiety_acts_on = adrenergic_receptor",
+    "med:naloxone ∘ naloxone ⇒ active_moiety_molecular_formula = C19H21NO4",
+    "med:naloxone ∘ naloxone ⇒ active_moiety_molecular_weight = 327.37"
+  ],
+  "efficiency": {
+    "canonical_facts_per_sec": 444177.7,
+    "wall_seconds": 0.0
+  },
+  "temporal_grounding": {
+    "present": false,
+    "note": "no timer facts; a mission that writes timer_start/stop gets a scored duration"
+  }
+}

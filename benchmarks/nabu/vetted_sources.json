@@ -1,0 +1,24 @@
+{
+  "about": "Allowlist of sources a Nabu acquisition mission may trust. Academic and government only. A fact written from a source outside this list fails the vetted_source_rate metric, and a live mission's guard should abstain rather than assert it.",
+  "sources": {
+    "pubchem":        { "org": "NIH · NLM",        "tier": "gov",      "base": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/" },
+    "openfda":        { "org": "US FDA",           "tier": "gov",      "base": "https://api.fda.gov/" },
+    "rxnorm":         { "org": "NIH · NLM",        "tier": "gov",      "base": "https://rxnav.nlm.nih.gov/" },
+    "pubmed":         { "org": "NIH · NLM",        "tier": "gov",      "base": "https://eutils.ncbi.nlm.nih.gov/" },
+    "clinicaltrials": { "org": "NIH",              "tier": "gov",      "base": "https://clinicaltrials.gov/api/" },
+    "who":            { "org": "WHO",              "tier": "gov",      "base": "https://www.who.int/" },
+    "cdc":            { "org": "US CDC",           "tier": "gov",      "base": "https://data.cdc.gov/" },
+    "dplace":         { "org": "MPI (academic)",   "tier": "academic", "base": "https://d-place.org/" },
+    "openalex":       { "org": "OpenAlex",         "tier": "academic", "base": "https://api.openalex.org/" },
+    "scholar":        { "org": "Google Scholar",   "tier": "academic", "base": "https://scholar.google.com/" },
+    "arxiv":          { "org": "arXiv",            "tier": "academic", "base": "https://export.arxiv.org/api/" },
+    "crossref":       { "org": "Crossref",         "tier": "academic", "base": "https://api.crossref.org/" },
+    "semanticscholar":{ "org": "Semantic Scholar", "tier": "academic", "base": "https://api.semanticscholar.org/" },
+    "europepmc":      { "org": "Europe PMC",       "tier": "academic", "base": "https://www.ebi.ac.uk/europepmc/" }
+  },
+  "domain_patterns": [
+    "\\.gov$", "\\.edu$", "\\.int$", "\\.ac\\.[a-z]{2}$",
+    "ncbi|nih|fda|who|cdc|europepmc",
+    "pubchem|pubmed|rxnorm|openalex|scholar|arxiv|d-?place|crossref|doaj|semanticscholar"
+  ]
+}
