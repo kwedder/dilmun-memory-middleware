@@ -580,18 +580,25 @@ const ACQ_SRC = {
 };
 // the acquirable world — every value is sourced from a vetted authority (mirrors nabu_seed.json)
 const ACQ_DB = {
-  "water":       { domain: "chem", src: "pubchem", facts: { molecular_formula: "H2O", molecular_weight: "18.015" } },
-  "epinephrine": { domain: "chem", src: "pubchem", facts: { molecular_formula: "C9H13NO3", molecular_weight: "183.20", acts_on: "adrenergic_receptor" } },
-  "naloxone":    { domain: "chem", src: "pubchem", facts: { molecular_formula: "C19H21NO4", molecular_weight: "327.37" } },
-  "aspirin":     { domain: "chem", src: "pubchem", facts: { molecular_formula: "C9H8O4", molecular_weight: "180.16" } },
-  "caffeine":    { domain: "chem", src: "pubchem", facts: { molecular_formula: "C8H10N4O2", molecular_weight: "194.19", acts_on: "adenosine_receptor" } },
-  "glucose":     { domain: "chem", src: "pubchem", facts: { molecular_formula: "C6H12O6", molecular_weight: "180.16" } },
-  "med:epinephrine": { domain: "med", src: "openfda", facts: { drug_class: "sympathomimetic", indication: "anaphylaxis", active_moiety: "epinephrine", route: "IM" } },
-  "med:naloxone":    { domain: "med", src: "openfda", facts: { drug_class: "opioid_antagonist", indication: "opioid_overdose", active_moiety: "naloxone", route: "IV" } },
-  "med:aspirin":     { domain: "med", src: "openfda", facts: { drug_class: "antiplatelet", indication: "acute_coronary_syndrome", active_moiety: "aspirin", route: "PO" } },
+  // Chemistry - PubChem
+  "water":       { domain: "chem", src: "pubchem", facts: { molecular_formula: "H₂O", molecular_weight: "18.015" } },
+  "epinephrine": { domain: "chem", src: "pubchem", facts: { molecular_formula: "C₉H₁₃NO₃", molecular_weight: "183.20", acts_on: "adrenergic_receptor" } },
+  "naloxone":    { domain: "chem", src: "pubchem", facts: { molecular_formula: "C₁₉H₂₁NO₄", molecular_weight: "327.37" } },
+  "caffeine":    { domain: "chem", src: "pubchem", facts: { molecular_formula: "C₈H₁₀N₄O₂", molecular_weight: "194.19" } },
+
+  // Medicine - openFDA
+  "med:epinephrine": { domain: "med", src: "openfda", facts: { drug_class: "sympathomimetic", indication: "anaphylaxis", route: "IM" } },
+  "med:naloxone":    { domain: "med", src: "openfda", facts: { drug_class: "opioid_antagonist", indication: "opioid_overdose", route: "IV" } },
+
+  // Anthropology - D-PLACE (Ethnographic Atlas)
   "soc:juhoansi":  { domain: "anthro", src: "dplace", facts: { subsistence: "hunting_gathering", region: "kalahari_southern_africa" } },
   "soc:nuer":      { domain: "anthro", src: "dplace", facts: { subsistence: "pastoralism", region: "nile_east_africa" } },
   "soc:trobriand": { domain: "anthro", src: "dplace", facts: { subsistence: "horticulture", region: "melanesia", exchange: "kula_ring" } },
+  "soc:mbuti":     { domain: "anthro", src: "dplace", facts: { subsistence: "hunting_gathering", region: "ituri_congo" } },
+  "soc:mongol":    { domain: "anthro", src: "dplace", facts: { subsistence: "pastoralism", region: "steppes_east_asia" } },
+  "soc:yanomamo":  { domain: "anthro", src: "dplace", facts: { subsistence: "horticulture_foraging", region: "amazonia" } },
+  "soc:maasai":    { domain: "anthro", src: "dplace", facts: { subsistence: "pastoralism", region: "great_rift_valley" } },
+  "soc:inuit":     { domain: "anthro", src: "dplace", facts: { subsistence: "hunting_fishing", region: "arctic_north_america" } },
 };
 // find acquirable entities matching a free-text ask
 function acqMatch(term) {
