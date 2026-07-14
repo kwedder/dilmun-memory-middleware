@@ -594,27 +594,8 @@ const ACQ_SRC = {
   pubchem:  { x: -6.2, z: -3.0 }, openfda: { x: 6.0, z: -3.2 },
   pubmed:   { x: -6.4, z: 2.6 },  dplace:  { x: 5.8, z: 3.0 }, openalex: { x: 0.4, z: 6.6 },
 };
-// the acquirable world — every value is sourced from a vetted authority (mirrors nabu_seed.json)
-const ACQ_DB = {
-  "water":       { domain: "chem", src: "pubchem", facts: { molecular_formula: "H2O", molecular_weight: "18.015" } },
-  "epinephrine": { domain: "chem", src: "pubchem", facts: { molecular_formula: "C9H13NO3", molecular_weight: "183.20", acts_on: "adrenergic_receptor" } },
-  "naloxone":    { domain: "chem", src: "pubchem", facts: { molecular_formula: "C19H21NO4", molecular_weight: "327.37" } },
-  "aspirin":     { domain: "chem", src: "pubchem", facts: { molecular_formula: "C9H8O4", molecular_weight: "180.16" } },
-  "caffeine":    { domain: "chem", src: "pubchem", facts: { molecular_formula: "C8H10N4O2", molecular_weight: "194.19", acts_on: "adenosine_receptor" } },
-  "glucose":     { domain: "chem", src: "pubchem", facts: { molecular_formula: "C6H12O6", molecular_weight: "180.16" } },
-  "med:epinephrine": { domain: "med", src: "openfda", facts: { drug_class: "sympathomimetic", indication: "anaphylaxis", active_moiety: "epinephrine", route: "IM" } },
-  "med:naloxone":    { domain: "med", src: "openfda", facts: { drug_class: "opioid_antagonist", indication: "opioid_overdose", active_moiety: "naloxone", route: "IV" } },
-  "med:aspirin":     { domain: "med", src: "openfda", facts: { drug_class: "antiplatelet", indication: "acute_coronary_syndrome", active_moiety: "aspirin", route: "PO" } },
-  "soc:juhoansi":  { domain: "anthro", src: "dplace", facts: { subsistence: "hunting_gathering", region: "kalahari_southern_africa" } },
-  "soc:nuer":      { domain: "anthro", src: "dplace", facts: { subsistence: "pastoralism", region: "nile_east_africa" } },
-  "soc:trobriand": { domain: "anthro", src: "dplace", facts: { subsistence: "horticulture", region: "melanesia", exchange: "kula_ring" } },
-};
-// find acquirable entities matching a free-text ask
-function acqMatch(term) {
-  const q = term.trim().toLowerCase().replace(/^(med|soc):/, "");
-  if (!q) return [];
-  return Object.keys(ACQ_DB).filter(id => id.toLowerCase().replace(/^(med|soc):/, "").includes(q));
-}
+// NO DEMO DATA. Acquisition is live-only: facts come exclusively from the bridge's
+// /acquire endpoint (real vetted sources). No bridge → nothing is collected.
 
 const SOURCES = {
   acquire: {
@@ -627,15 +608,15 @@ const SOURCES = {
       const sourced = st.store.filter(f => f.source);            // acquired-from-a-source facts
       const vettedN = sourced.filter(f => isVetted(f.source)).length;
       const rate = sourced.length ? vettedN / sourced.length : 1; // derived facts are provenance-linked, not re-sourced
-      let h = `<div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:10px;">Memory acquired from vetted sources. Ask above (or, later, via the Pi terminal) — the guard refuses anything not academic/government.</div>`;
+      let h = `<div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:10px;">Memory acquired <span style="color:var(--accent)">live from vetted sources only</span>. Ask any term above or in the console — the guard refuses anything not academic/government.</div>`;
       if (!canon.length) {
-        h += `<div class="insp-empty">No facts yet. Try <b style="color:var(--accent)">epinephrine</b>, <b style="color:var(--accent)">naloxone</b>, <b style="color:var(--accent)">trobriand</b>, or <b style="color:var(--accent)">*</b> for all.</div>`;
+        h += `<div class="insp-empty">No facts yet. Ask <b style="color:var(--accent)">any term</b> — it's looked up live in PubChem · openFDA · OpenAlex. <span style="color:var(--text-tertiary)">(needs the bridge: <code style="color:var(--accent)">node instrument/server.mjs</code>)</span></div>`;
         el.innerHTML = h; return;
       }
-      const byDom = {};
-      for (const f of canon) { const d = ACQ_DB[f.entity]?.domain || (f.derivedFrom ? "derived" : "?"); (byDom[d] ||= []).push(f); }
-      for (const [dom, fs] of Object.entries(byDom)) {
-        h += `<div style="font-size:9px;letter-spacing:0.18em;color:var(--text-tertiary);margin:8px 0 4px;text-transform:uppercase;">${dom} · ${fs.length}</div>`;
+      const bySrc = {};
+      for (const f of canon) { const s = f.derivedFrom ? "derived (∘)" : (f.source || "unsourced"); (bySrc[s] ||= []).push(f); }
+      for (const [s, fs] of Object.entries(bySrc)) {
+        h += `<div style="font-size:9px;letter-spacing:0.18em;color:var(--text-tertiary);margin:8px 0 4px;text-transform:uppercase;">${s} · ${fs.length}</div>`;
         for (const f of fs.slice(0, 8)) {
           h += `<div class="score-row" data-fid="${f.id}"><span class="fv">${f.entity.replace(/^(med|soc):/, "")}·${f.predicate} = ${f.value}</span>
             <span class="sc" style="font-size:9px;color:var(--text-tertiary)">${f.source || "∘"}</span></div>`;
@@ -940,47 +921,11 @@ function reset(newSrc) {
   markDirty(); renderPipe();
 }
 
-/* ── ACQUIRE: ask it to look something up (vetted sources only) ── */
-function acquire(term) {
-  markDirty();
-  const q = (term || "").trim();
-  if (!q) return;
-  const all = q === "*" || /^all$/i.test(q);
-  const ids = all ? Object.keys(ACQ_DB) : acqMatch(q);
-  if (!ids.length) {
-    pushStory(`<span class="ev" style="color:var(--coral);background:rgba(240,112,80,0.1);border-color:rgba(240,112,80,0.25)">guard · abstain</span> <b>"${q}"</b> <span class="mut">— no vetted academic/government source carries this. The guard won't guess. Try a compound, a drug, or a society.</span>`, "forget");
-    return;
-  }
-  const prevIds = new Set(st.store.map(f => f.id));
-  let added = 0, seqBase = st.store.length;
-  for (const id of ids) {
-    const e = ACQ_DB[id];
-    activeFetch = { src: e.src };               // beam lights up while "fetching"
-    for (const [pred, val] of Object.entries(e.facts)) {
-      st.store.push(F(id, pred, val, NOW - (seqBase++ % 40), 0.97, { source: e.src }));
-      added++;
-    }
-  }
-  activeFetch = null;
-  // canonicalize (dedupe) then compose (bridge domains) — the real operators
-  st.store = canonicalize(st.store);
-  const d = derive(st.store, st.store.length);
-  if (d.length) st.store = st.store.concat(canonicalize(st.store.concat(d)).filter(f => f.derivedFrom));
-  st.store = canonicalize(st.store);
-  const src = VETTED.find(v => ids.some(i => ACQ_DB[i].src === v.id));
-  const doms = [...new Set(ids.map(i => ACQ_DB[i].domain))];
-  pushStory(`<span class="ev">acquired</span> <b>+${added} facts</b> <span class="mut">on ${ids.length} ${ids.length > 1 ? "entities" : "entity"} (${doms.join(", ")}) from vetted sources. Canonicalized + composed — cross-domain bridges derived where a drug's moiety meets its compound.</span>`, "settled");
-  syncParticles(prevIds);
-  SOURCES.acquire.renderQuery(st, queryEl);
-  bindProofLinks();
-  document.getElementById("st-facts").textContent = st.store.length;
-  document.getElementById("st-derived").textContent = st.store.filter(f => f.derivedFrom).length;
-}
-
-/* ── live acquisition via the bridge — real vetted-source lookup of ANY term ──
-   The bridge's /acquire hits PubChem/openFDA/OpenAlex (vetted only). This is the
-   pi.dev seam: point /acquire at a `pi` RPC run (dilmun_write_fact restricted to
-   the same allowlist) and the console drives Pi's own web search instead. */
+/* ── ACQUIRE is LIVE-ONLY via the bridge — real vetted-source lookup of ANY term.
+   No demo data exists. The bridge's /acquire hits PubChem/openFDA/OpenAlex
+   (vetted only). This is the pi.dev seam: point /acquire at a `pi` RPC run
+   (dilmun_write_fact restricted to the same allowlist) and the console drives
+   Pi's own web search instead. ── */
 let BRIDGE = false;
 (function detectBridge() {
   const local = location.protocol === "http:" || /^(127\.|localhost|0\.0\.0\.0)/.test(location.hostname);
@@ -1008,21 +953,20 @@ async function tryLive(term) {
   return { added: rows.length, sources: d.sources || [] };
 }
 
-// unified entry point: live bridge lookup first, else the built-in demo set
+// live-only entry point — real vetted-source lookup, or nothing
 async function doAcquire(term, report) {
   term = (term || "").trim();
   if (!term) return 0;
+  const esc = term.replace(/</g, "&lt;");
   if (srcKey !== "acquire") { reset("acquire"); renderTabs(); }
+  if (!BRIDGE) {
+    report(`<span class="c-coral">no bridge</span> — live vetted acquisition needs <code>node instrument/server.mjs</code>. <span class="c-dim">Nothing collected (there is no demo data).</span>`);
+    return 0;
+  }
   const live = await tryLive(term);
   if (live && live.added > 0) { report(`<span class="c-acc">+${live.added}</span> facts collected live from <span class="c-acc">${live.sources.join(", ")}</span> → memory holds <span class="c-acc">${st.store.length}</span>.`); return live.added; }
-  if (live && live.added === 0) { report(`<span class="c-coral">guard · abstain</span> — no vetted academic/government source returned facts for "${term.replace(/</g, "&lt;")}".`); return 0; }
-  // no bridge reachable → built-in demo set
-  const before = st.store.length;
-  acquire(term);
-  const added = st.store.length - before;
-  if (added > 0) report(`<span class="c-acc">+${added}</span> facts <span class="c-dim">(demo set — run <code>node instrument/server.mjs</code> for a live vetted lookup of any term)</span>.`);
-  else report(`<span class="c-coral">guard · abstain</span> — "${term.replace(/</g, "&lt;")}" isn't in the demo set. Start the bridge for a live vetted lookup.`);
-  return added;
+  report(`<span class="c-coral">guard · abstain</span> — no vetted academic/government source returned facts for "${esc}".`);
+  return 0;
 }
 
 /* tabs — ACQUIRE (primary) + TESTING (grouped demos) */
@@ -1545,8 +1489,8 @@ class DilmunConsole {
     this.input.addEventListener("keydown", e => { if (e.key === "Enter") { this.run(this.input.value); this.input.value = ""; } });
     termTilesEl.appendChild(this.el);
     layoutTerms();
-    this.print(`<span class="c-acc">dilmun memory console</span> — the context window. Ask <span class="c-acc">any term</span>; it's looked up in <span class="c-acc">vetted sources only</span> (PubChem · openFDA · OpenAlex) and collected into memory.`);
-    this.print(`<span class="c-dim">try:</span> anthropology · epinephrine · caffeine · recall &lt;q&gt; · stats · help <span class="c-dim">— live lookup needs the bridge; else a small demo set</span>`);
+    this.print(`<span class="c-acc">dilmun memory console</span> — the context window. Ask <span class="c-acc">any term</span>; it's looked up <span class="c-acc">live in vetted sources only</span> (PubChem · openFDA · OpenAlex) and collected into memory. No demo data.`);
+    this.print(`<span class="c-dim">try:</span> anthropology · epinephrine · caffeine · recall &lt;q&gt; · stats · help <span class="c-dim">— needs the bridge: node instrument/server.mjs</span>`);
     setTimeout(() => this.input.focus(), 0);
   }
   print(html) {
